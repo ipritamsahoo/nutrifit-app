@@ -5,7 +5,7 @@
 /* ── Full-page wrapper ─────────────────────────────────────────── */
 .camera-view {
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -14,8 +14,6 @@
   gap: 24px;
   position: relative;
   overflow: hidden;
-  padding: 20px;
-  box-sizing: border-box;
 }
 
 /* subtle background grid */
@@ -53,17 +51,6 @@
   font-weight: 400;
 }
 
-/* ── Main content: video + panel side-by-side ──────────────────── */
-.main-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
-  z-index: 1;
-  width: 100%;
-  max-width: 1200px;
-  justify-content: center;
-}
-
 /* ── Video container ───────────────────────────────────────────── */
 .video-container {
   position: relative;
@@ -73,8 +60,7 @@
     0 0 0 1px rgba(255,255,255,0.06),
     0 20px 60px rgba(0,0,0,0.5),
     0 0 40px rgba(0,200,255,0.08);
-  flex: 1;
-  min-width: 0;
+  z-index: 1;
 }
 
 /* ── Webcam video ──────────────────────────────────────────────── */
@@ -231,194 +217,4 @@
   font-size: 0.9rem;
   color: #888;
   line-height: 1.5;
-}
-
-/* ===================================================================
-   Curl Counter Panel
-   ================================================================ */
-
-.curl-panel {
-  width: 260px;
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 24px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.curl-panel-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #00ffaa, #00ccff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-align: center;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-/* ── Total reps big number ─────────────────────────────────────── */
-.total-reps {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 16px 0;
-  background: rgba(0, 255, 170, 0.06);
-  border: 1px solid rgba(0, 255, 170, 0.12);
-  border-radius: 12px;
-}
-
-.total-reps-number {
-  font-size: 3rem;
-  font-weight: 800;
-  color: #00ffaa;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.total-reps-label {
-  font-size: 0.75rem;
-  color: #668877;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-}
-
-/* ── Per-arm card ──────────────────────────────────────────────── */
-.arm-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.arm-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.arm-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #ccc;
-}
-
-.arm-stage {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #888;
-  transition: background 0.25s, color 0.25s;
-}
-
-.arm-stage.up {
-  background: rgba(0, 255, 170, 0.15);
-  color: #00ffaa;
-}
-
-.arm-stage.down {
-  background: rgba(0, 180, 255, 0.15);
-  color: #00b4ff;
-}
-
-.arm-card-body {
-  display: flex;
-  padding: 12px 14px;
-  gap: 12px;
-}
-
-.arm-stat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.arm-stat-value {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #eee;
-  font-variant-numeric: tabular-nums;
-}
-
-.arm-stat-label {
-  font-size: 0.68rem;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 500;
-}
-
-/* ── Reset button ──────────────────────────────────────────────── */
-.reset-btn {
-  width: 100%;
-  padding: 10px 0;
-  border: 1px solid rgba(255, 80, 80, 0.25);
-  border-radius: 10px;
-  background: rgba(255, 80, 80, 0.08);
-  color: #ff6666;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, transform 0.1s;
-  letter-spacing: 0.02em;
-}
-
-.reset-btn:hover {
-  background: rgba(255, 80, 80, 0.15);
-  border-color: rgba(255, 80, 80, 0.4);
-}
-
-.reset-btn:active {
-  transform: scale(0.97);
-}
-
-/* ── Responsive: stack on smaller screens ──────────────────────── */
-@media (max-width: 800px) {
-  .main-content {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .curl-panel {
-    width: 100%;
-    max-width: 500px;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 16px;
-    gap: 12px;
-  }
-
-  .curl-panel-title {
-    width: 100%;
-  }
-
-  .total-reps {
-    width: 100%;
-  }
-
-  .arm-card {
-    flex: 1;
-    min-width: 180px;
-  }
-
-  .reset-btn {
-    width: 100%;
-  }
 }
