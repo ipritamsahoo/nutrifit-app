@@ -12,6 +12,7 @@
  *   - Landmarks are stored in a useRef (no re-renders per frame).
  *   - Drawing is done directly on the canvas via requestAnimationFrame.
  *   - React state is only updated when the detection status *changes*.
+ *   - Resolution is fully dynamic – adapts to the actual camera stream.
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react';
@@ -21,8 +22,10 @@ import { clearCanvas, drawKeypoints, drawConnections } from '../utils/drawUtils'
 import './CameraView.css';
 
 /* ── Constants ──────────────────────────────────────────────────── */
-const VIDEO_WIDTH  = 640;
-const VIDEO_HEIGHT = 480;
+// These are the *requested* constraints; actual resolution may differ
+// depending on the device camera. The code adapts dynamically.
+const REQUESTED_WIDTH  = 1280;
+const REQUESTED_HEIGHT = 720;
 
 function CameraView() {
   /* ── Refs (no re-renders) ───────────────────────────────────── */
@@ -39,6 +42,7 @@ function CameraView() {
   const [cameraError, setCameraError]   = useState(false);
   const [fps, setFps]                   = useState(0);
   const [loading, setLoading]           = useState(true);
+  const [videoDims, setVideoDims]       = useState({ width: REQUESTED_WIDTH, height: REQUESTED_HEIGHT });
 
   // Track whether we've received the first result (to dismiss loading)
   const firstResultRef = useRef(false);
@@ -81,6 +85,29 @@ function CameraView() {
     };
   }, [handleResults]);
 
+  /* ── Sync canvas to actual video resolution ────────────────── */
+  const handleVideoReady = useCallback(() => {
+    const video = webcamRef.current?.video;
+    if (!video) return;
+
+    const actualW = video.videoWidth;
+    const actualH = video.videoHeight;
+
+    if (actualW && actualH) {
+      console.log(`[CameraView] Actual camera resolution: ${actualW}×${actualH}`);
+
+      // Update container size to match actual aspect ratio
+      setVideoDims({ width: actualW, height: actualH });
+
+      // Match canvas internal resolution to exact video resolution
+      const canvas = canvasRef.current;
+      if (canvas) {
+        canvas.width  = actualW;
+        canvas.height = actualH;
+      }
+    }
+  }, []);
+
   /* ── Detection + draw loop ─────────────────────────────────── */
   useEffect(() => {
     let running = true;
@@ -94,10 +121,15 @@ function CameraView() {
       if (video && canvas && poseRef.current) {
         const ctx = canvas.getContext('2d');
 
-        // Make sure canvas dimensions match the video
-        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-          canvas.width  = video.videoWidth  || VIDEO_WIDTH;
-          canvas.height = video.videoHeight || VIDEO_HEIGHT;
+        // Dynamically sync canvas to actual video resolution every frame
+        // in case the stream resolution changes (e.g. device rotation)
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        if (vw && vh && (canvas.width !== vw || canvas.height !== vh)) {
+          canvas.width  = vw;
+          canvas.height = vh;
+          setVideoDims({ width: vw, height: vh });
+          console.log(`[CameraView] Canvas re-synced to ${vw}×${vh}`);
         }
 
         // Send the current frame to MediaPipe (async)
@@ -174,10 +206,14 @@ function CameraView() {
         <p className="header-subtitle">Real-time skeleton tracking</p>
       </header>
 
-      {/* Video + Canvas container */}
+      {/* Video + Canvas container – sized to actual video resolution */}
       <div
         className="video-container"
-        style={{ width: VIDEO_WIDTH, height: VIDEO_HEIGHT }}
+        style={{
+          width: '100%',
+          maxWidth: videoDims.width,
+          aspectRatio: `${videoDims.width} / ${videoDims.height}`,
+        }}
       >
         {/* Loading overlay */}
         {loading && (
@@ -192,14 +228,15 @@ function CameraView() {
           ref={webcamRef}
           audio={false}
           mirrored={true}
-          width={VIDEO_WIDTH}
-          height={VIDEO_HEIGHT}
+          width={videoDims.width}
+          height={videoDims.height}
           videoConstraints={{
-            width: VIDEO_WIDTH,
-            height: VIDEO_HEIGHT,
+            width: { ideal: REQUESTED_WIDTH },
+            height: { ideal: REQUESTED_HEIGHT },
             facingMode: 'user',
           }}
           onUserMediaError={handleCameraError}
+          onLoadedData={handleVideoReady}
           className="webcam-video"
         />
 
@@ -207,8 +244,6 @@ function CameraView() {
         <canvas
           ref={canvasRef}
           className="pose-canvas"
-          width={VIDEO_WIDTH}
-          height={VIDEO_HEIGHT}
         />
 
         {/* FPS counter */}

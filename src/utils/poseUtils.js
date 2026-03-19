@@ -62,8 +62,8 @@ export function createPoseDetector(onResults) {
     modelComplexity: 2, // 2 is heavier but much more accurate for full-body
     smoothLandmarks: true,
     enableSegmentation: false,
-    minDetectionConfidence: 0.4,
-    minTrackingConfidence: 0.4,
+    minDetectionConfidence: 0.6,
+    minTrackingConfidence: 0.6,
   });
 
   pose.onResults(onResults);

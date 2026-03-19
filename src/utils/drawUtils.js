@@ -11,8 +11,13 @@ import { POSE_CONNECTIONS } from './poseUtils';
 const KEYPOINT_COLOR   = '#00ffaa';          // bright mint
 const KEYPOINT_BORDER  = '#006644';
 const CONNECTION_COLOR = 'rgba(0, 200, 255, 0.6)';  // cyan glow
-const KEYPOINT_RADIUS  = 4;
-const LINE_WIDTH       = 2.5;
+const KEYPOINT_RADIUS  = 5;
+const LINE_WIDTH       = 3;
+
+/* ── Visibility threshold ───────────────────────────────────────── */
+// Landmarks below this visibility are not drawn.
+// This filters out wildly inaccurate guesses while keeping most joints.
+const MIN_VISIBILITY = 0.3;
 
 /**
  * clearCanvas – wipe the canvas for the next frame.
@@ -33,23 +38,28 @@ export function clearCanvas(ctx, width, height) {
  * @param {number} height    – canvas height in pixels
  */
 export function drawKeypoints(ctx, landmarks, width, height) {
-  ctx.fillStyle   = KEYPOINT_COLOR;
-  ctx.strokeStyle = KEYPOINT_BORDER;
-  ctx.lineWidth   = 1.5;
-
   for (const lm of landmarks) {
-    // Removed visibility check to ensure all 33 landmarks always draw, 
-    // even if the model is guessing their location.
-    // if (lm.visibility < 0.1) continue;
+    // Skip low-confidence landmarks to avoid drawing at wrong positions
+    if (lm.visibility < MIN_VISIBILITY) continue;
 
     const x = lm.x * width;
     const y = lm.y * height;
+
+    // Use opacity proportional to visibility for extra clarity
+    const alpha = Math.max(0.4, lm.visibility);
+
+    ctx.fillStyle   = KEYPOINT_COLOR;
+    ctx.strokeStyle = KEYPOINT_BORDER;
+    ctx.lineWidth   = 1.5;
+    ctx.globalAlpha = alpha;
 
     ctx.beginPath();
     ctx.arc(x, y, KEYPOINT_RADIUS, 0, 2 * Math.PI);
     ctx.fill();
     ctx.stroke();
   }
+
+  ctx.globalAlpha = 1; // reset
 }
 
 /**
@@ -69,12 +79,18 @@ export function drawConnections(ctx, landmarks, width, height) {
     const a = landmarks[i];
     const b = landmarks[j];
 
-    // Removed visibility check to ensure the full skeleton is always connected
-    // if (a.visibility < 0.1 || b.visibility < 0.1) continue;
+    // Skip connection if either endpoint is low-confidence
+    if (a.visibility < MIN_VISIBILITY || b.visibility < MIN_VISIBILITY) continue;
+
+    // Use the lower visibility of the two endpoints for line opacity
+    const alpha = Math.max(0.3, Math.min(a.visibility, b.visibility));
+    ctx.globalAlpha = alpha;
 
     ctx.beginPath();
     ctx.moveTo(a.x * width, a.y * height);
     ctx.lineTo(b.x * width, b.y * height);
     ctx.stroke();
   }
+
+  ctx.globalAlpha = 1; // reset
 }
