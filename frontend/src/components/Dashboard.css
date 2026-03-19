@@ -1,0 +1,213 @@
+/* Dashboard.css — Premium dark dashboard */
+
+.dash-page {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #e0e0e0;
+  overflow-y: auto;
+}
+
+/* Loading */
+.dash-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 100vh;
+  font-size: 16px;
+  color: #aaa;
+}
+
+/* Header */
+.dash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.dash-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dash-brand span { font-size: 26px; }
+.dash-brand h1 {
+  font-size: 22px;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+.dash-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn-outline {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.04);
+  color: #c7d2fe;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-outline:hover {
+  background: rgba(99,102,241,0.15);
+  border-color: #6366f1;
+}
+.btn-ghost {
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn-ghost:hover { color: #f87171; }
+
+/* Content */
+.dash-content {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+}
+.dash-greeting {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 28px;
+}
+
+/* No plan */
+.no-plan-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 18px;
+  padding: 40px;
+  text-align: center;
+}
+.no-plan-card p {
+  color: #888;
+  margin-bottom: 18px;
+  font-size: 16px;
+}
+.no-plan-card .submit-btn {
+  display: inline-block;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.no-plan-card .submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99,102,241,0.35);
+}
+
+/* Plan grid */
+.plan-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.plan-section {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 24px;
+}
+.plan-section h3 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #c7d2fe;
+}
+
+/* Day cards */
+.plan-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.day-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px;
+}
+.day-card h4 {
+  font-size: 13px;
+  color: #818cf8;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+/* Meal rows */
+.meal-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  flex-wrap: wrap;
+}
+.meal-name {
+  font-size: 12px;
+  color: #888;
+  text-transform: capitalize;
+  min-width: 70px;
+}
+.meal-desc {
+  font-size: 13px;
+  color: #d0d0d0;
+  flex: 1;
+}
+.meal-cal {
+  font-size: 11px;
+  color: #4ade80;
+  font-weight: 600;
+}
+
+/* Exercise rows */
+.exercise-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.ex-name {
+  font-size: 14px;
+  color: #d0d0d0;
+}
+.ex-detail {
+  font-size: 12px;
+  color: #888;
+}
+.day-duration {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #06b6d4;
+}
+
+/* Info section */
+.info-section p {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.plan-notes {
+  color: #aaa;
+  font-style: italic;
+  margin-top: 8px;
+}

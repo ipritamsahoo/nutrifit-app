@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@mediapipe/pose": "^0.5.1675469404",
+    "firebase": "^12.11.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.13.1",
     "react-webcam": "^7.2.0"
   },
   "devDependencies": {

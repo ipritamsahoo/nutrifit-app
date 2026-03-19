@@ -19,6 +19,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import { createPoseDetector } from '../utils/poseUtils';
 import { clearCanvas, drawKeypoints, drawConnections } from '../utils/drawUtils';
+import { calculateAngle, checkRepSquat, checkRepBicepCurl } from '../utils/angleUtils';
 import './CameraView.css';
 
 /* ── Constants ──────────────────────────────────────────────────── */
@@ -36,6 +37,10 @@ function CameraView() {
   const rafIdRef     = useRef(null);   // requestAnimationFrame ID
   const fpsRef       = useRef(0);      // current FPS value
   const frameTimesRef = useRef([]);    // timestamps for FPS calculation
+  const workoutStateRef = useRef('up');
+  const repsRef         = useRef(0);
+  const currentAngleRef = useRef(0);
+  const exerciseTypeRef = useRef('squat'); // Change to 'bicepCurl' to track arm curls
 
   /* ── State (UI badges only – updated infrequently) ──────────── */
   const [poseDetected, setPoseDetected] = useState(false);
@@ -146,6 +151,57 @@ function CameraView() {
         if (landmarksRef.current) {
           drawConnections(ctx, landmarksRef.current, canvas.width, canvas.height);
           drawKeypoints(ctx, landmarksRef.current, canvas.width, canvas.height);
+
+          // === Angle & Rep calculation logic ===
+          const landmarks = landmarksRef.current;
+          let p1, p2, p3;
+          if (exerciseTypeRef.current === 'squat') {
+            // Left Hip (23), Left Knee (25), Left Ankle (27)
+            p1 = landmarks[23]; p2 = landmarks[25]; p3 = landmarks[27];
+          } else {
+            // Left Shoulder (11), Left Elbow (13), Left Wrist (15)
+            p1 = landmarks[11]; p2 = landmarks[13]; p3 = landmarks[15];
+          }
+
+          // Check if we have visible landmarks
+          if (p1 && p2 && p3 && p1.visibility > 0.5 && p2.visibility > 0.5 && p3.visibility > 0.5) {
+            // Convert normalized coordinates to pixel coordinates
+            const px1 = { x: p1.x * canvas.width, y: p1.y * canvas.height };
+            const px2 = { x: p2.x * canvas.width, y: p2.y * canvas.height };
+            const px3 = { x: p3.x * canvas.width, y: p3.y * canvas.height };
+
+            // Calculate angle
+            const angle = calculateAngle(px1, px2, px3);
+            currentAngleRef.current = angle;
+
+            // Check if rep was performed
+            let res;
+            if (exerciseTypeRef.current === 'squat') {
+                 res = checkRepSquat(angle, workoutStateRef.current);
+            } else {
+                 res = checkRepBicepCurl(angle, workoutStateRef.current);
+            }
+            workoutStateRef.current = res.newState;
+            if (res.repCompleted) repsRef.current += 1;
+
+            // Draw Angle near the joint
+            ctx.fillStyle = 'white';
+            ctx.font = '30px Arial';
+            ctx.fillText(Math.round(angle) + '°', px2.x + 20, px2.y);
+            
+            // Draw Reps UI Box
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(10, 10, 200, 90);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText(`Exercise: ${exerciseTypeRef.current}`, 20, 40);
+            ctx.fillText(`Reps: ${repsRef.current}`, 20, 70);
+            
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#4ade80'; // light green
+            ctx.fillText(`Stage: ${workoutStateRef.current.toUpperCase()}`, 110, 70);
+          }
         }
 
         // FPS calculation
