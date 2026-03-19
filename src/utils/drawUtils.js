@@ -6,6 +6,7 @@
  */
 
 import { POSE_CONNECTIONS } from './poseUtils';
+import { LANDMARK } from './angleUtils';
 
 /* ── Colour palette ─────────────────────────────────────────────── */
 const KEYPOINT_COLOR   = '#00ffaa';          // bright mint
@@ -13,10 +14,10 @@ const KEYPOINT_BORDER  = '#006644';
 const CONNECTION_COLOR = 'rgba(0, 200, 255, 0.6)';  // cyan glow
 const KEYPOINT_RADIUS  = 5;
 const LINE_WIDTH       = 3;
+const ANGLE_TEXT_COLOR  = '#ffffff';
+const ANGLE_BG_COLOR   = 'rgba(0, 0, 0, 0.55)';
 
 /* ── Visibility threshold ───────────────────────────────────────── */
-// Landmarks below this visibility are not drawn.
-// This filters out wildly inaccurate guesses while keeping most joints.
 const MIN_VISIBILITY = 0.3;
 
 /**
@@ -93,4 +94,86 @@ export function drawConnections(ctx, landmarks, width, height) {
   }
 
   ctx.globalAlpha = 1; // reset
+}
+
+/**
+ * drawAngleAtJoint – renders an angle value as a label near a joint.
+ *
+ * Draws a small rounded-rect background with the angle text on top,
+ * positioned near the specified landmark index.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Array}  landmarks
+ * @param {number} jointIndex – landmark index of the joint (e.g. LEFT_ELBOW)
+ * @param {number} angle      – the angle in degrees (will be rounded)
+ * @param {number} width      – canvas width
+ * @param {number} height     – canvas height
+ */
+export function drawAngleAtJoint(ctx, landmarks, jointIndex, angle, width, height) {
+  if (angle === null || angle === undefined) return;
+
+  const lm = landmarks[jointIndex];
+  if (!lm || lm.visibility < MIN_VISIBILITY) return;
+
+  const x = lm.x * width;
+  const y = lm.y * height;
+  const label = `${Math.round(angle)}°`;
+
+  // Responsive font size based on canvas width
+  const fontSize = Math.max(12, Math.round(width / 50));
+  ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
+
+  const textMetrics = ctx.measureText(label);
+  const textW = textMetrics.width;
+  const textH = fontSize;
+  const padX = 6;
+  const padY = 4;
+  const offsetX = 12;
+  const offsetY = -12;
+
+  // Background pill
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = ANGLE_BG_COLOR;
+  const rx = x + offsetX;
+  const ry = y + offsetY - textH;
+  const rw = textW + padX * 2;
+  const rh = textH + padY * 2;
+  const radius = 6;
+
+  ctx.beginPath();
+  ctx.moveTo(rx + radius, ry);
+  ctx.lineTo(rx + rw - radius, ry);
+  ctx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + radius);
+  ctx.lineTo(rx + rw, ry + rh - radius);
+  ctx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - radius, ry + rh);
+  ctx.lineTo(rx + radius, ry + rh);
+  ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - radius);
+  ctx.lineTo(rx, ry + radius);
+  ctx.quadraticCurveTo(rx, ry, rx + radius, ry);
+  ctx.closePath();
+  ctx.fill();
+
+  // Text
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = ANGLE_TEXT_COLOR;
+  ctx.textBaseline = 'top';
+  ctx.fillText(label, rx + padX, ry + padY);
+}
+
+/**
+ * drawAngles – draws angle labels at both elbows (if visible).
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Array}  landmarks
+ * @param {{ leftAngle: number|null, rightAngle: number|null }} angles
+ * @param {number} width
+ * @param {number} height
+ */
+export function drawAngles(ctx, landmarks, angles, width, height) {
+  if (angles.leftAngle !== null) {
+    drawAngleAtJoint(ctx, landmarks, LANDMARK.LEFT_ELBOW, angles.leftAngle, width, height);
+  }
+  if (angles.rightAngle !== null) {
+    drawAngleAtJoint(ctx, landmarks, LANDMARK.RIGHT_ELBOW, angles.rightAngle, width, height);
+  }
 }

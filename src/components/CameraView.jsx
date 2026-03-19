@@ -5,8 +5,9 @@
  *   1. Opens the webcam via react-webcam
  *   2. Sends frames to MediaPipe Pose for landmark detection
  *   3. Draws a real-time skeleton overlay on a <canvas>
- *   4. Shows a status badge ("Pose Detected" / "No Person Detected")
- *   5. Shows an FPS counter
+ *   4. Tracks bicep curl reps (left & right arms independently)
+ *   5. Shows angle values at the elbows
+ *   6. Shows a status badge, FPS counter, and curl counter panel
  *
  * Performance notes:
  *   - Landmarks are stored in a useRef (no re-renders per frame).
@@ -18,38 +19,47 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import { createPoseDetector } from '../utils/poseUtils';
-import { clearCanvas, drawKeypoints, drawConnections } from '../utils/drawUtils';
+import { clearCanvas, drawKeypoints, drawConnections, drawAngles } from '../utils/drawUtils';
+import { getLeftArmAngle, getRightArmAngle, processCurlFrame } from '../utils/angleUtils';
 import './CameraView.css';
 
 /* ── Constants ──────────────────────────────────────────────────── */
-// These are the *requested* constraints; actual resolution may differ
-// depending on the device camera. The code adapts dynamically.
 const REQUESTED_WIDTH  = 1280;
 const REQUESTED_HEIGHT = 720;
 
 function CameraView() {
   /* ── Refs (no re-renders) ───────────────────────────────────── */
-  const webcamRef    = useRef(null);
-  const canvasRef    = useRef(null);
-  const landmarksRef = useRef(null);   // latest landmarks snapshot
-  const poseRef      = useRef(null);   // { pose, sendFrame }
-  const rafIdRef     = useRef(null);   // requestAnimationFrame ID
-  const fpsRef       = useRef(0);      // current FPS value
-  const frameTimesRef = useRef([]);    // timestamps for FPS calculation
+  const webcamRef      = useRef(null);
+  const canvasRef      = useRef(null);
+  const landmarksRef   = useRef(null);   // latest landmarks snapshot
+  const poseRef        = useRef(null);   // { pose, sendFrame }
+  const rafIdRef       = useRef(null);   // requestAnimationFrame ID
+  const fpsRef         = useRef(0);
+  const frameTimesRef  = useRef([]);
 
-  /* ── State (UI badges only – updated infrequently) ──────────── */
+  // Curl state kept in refs for per-frame updates without re-renders
+  const leftCurlRef    = useRef({ reps: 0, stage: null });
+  const rightCurlRef   = useRef({ reps: 0, stage: null });
+  const anglesRef      = useRef({ leftAngle: null, rightAngle: null });
+
+  /* ── State (UI only – updated infrequently) ─────────────────── */
   const [poseDetected, setPoseDetected] = useState(false);
   const [cameraError, setCameraError]   = useState(false);
   const [fps, setFps]                   = useState(0);
   const [loading, setLoading]           = useState(true);
   const [videoDims, setVideoDims]       = useState({ width: REQUESTED_WIDTH, height: REQUESTED_HEIGHT });
 
-  // Track whether we've received the first result (to dismiss loading)
+  // Curl counter display state (updated ~4× per second)
+  const [curlDisplay, setCurlDisplay] = useState({
+    leftReps: 0, rightReps: 0,
+    leftStage: null, rightStage: null,
+    leftAngle: null, rightAngle: null,
+  });
+
   const firstResultRef = useRef(false);
 
   /* ── MediaPipe onResults callback ──────────────────────────── */
   const handleResults = useCallback((results) => {
-    // Dismiss loading spinner on first result (model is now warm)
     if (!firstResultRef.current) {
       firstResultRef.current = true;
       setLoading(false);
@@ -59,19 +69,25 @@ function CameraView() {
     const hasLandmarks =
       results.poseLandmarks && results.poseLandmarks.length > 0;
 
-    // Store in ref for the draw loop (no re-render)
     landmarksRef.current = hasLandmarks ? results.poseLandmarks : null;
 
-    // Only update React state when status actually changes
+    if (hasLandmarks) {
+      // Calculate angles
+      const leftAngle  = getLeftArmAngle(results.poseLandmarks);
+      const rightAngle = getRightArmAngle(results.poseLandmarks);
+      anglesRef.current = { leftAngle, rightAngle };
+
+      // Process curl state
+      leftCurlRef.current  = processCurlFrame(leftAngle,  leftCurlRef.current);
+      rightCurlRef.current = processCurlFrame(rightAngle, rightCurlRef.current);
+    } else {
+      anglesRef.current = { leftAngle: null, rightAngle: null };
+    }
+
     setPoseDetected((prev) => {
       if (prev !== hasLandmarks) return hasLandmarks;
       return prev;
     });
-
-    // Log landmarks for debugging (throttled to avoid console flood)
-    if (hasLandmarks && Math.random() < 0.02) {
-      console.log('[PoseDetection] Landmarks:', results.poseLandmarks);
-    }
   }, []);
 
   /* ── Initialise MediaPipe Pose ─────────────────────────────── */
@@ -95,11 +111,8 @@ function CameraView() {
 
     if (actualW && actualH) {
       console.log(`[CameraView] Actual camera resolution: ${actualW}×${actualH}`);
-
-      // Update container size to match actual aspect ratio
       setVideoDims({ width: actualW, height: actualH });
 
-      // Match canvas internal resolution to exact video resolution
       const canvas = canvasRef.current;
       if (canvas) {
         canvas.width  = actualW;
@@ -121,22 +134,17 @@ function CameraView() {
       if (video && canvas && poseRef.current) {
         const ctx = canvas.getContext('2d');
 
-        // Dynamically sync canvas to actual video resolution every frame
-        // in case the stream resolution changes (e.g. device rotation)
         const vw = video.videoWidth;
         const vh = video.videoHeight;
         if (vw && vh && (canvas.width !== vw || canvas.height !== vh)) {
           canvas.width  = vw;
           canvas.height = vh;
           setVideoDims({ width: vw, height: vh });
-          console.log(`[CameraView] Canvas re-synced to ${vw}×${vh}`);
         }
 
-        // Send the current frame to MediaPipe (async)
         try {
           await poseRef.current.sendFrame(video);
         } catch (err) {
-          // Silently handle transient frame-send errors
           console.warn('[PoseDetection] Frame send error:', err);
         }
 
@@ -146,32 +154,50 @@ function CameraView() {
         if (landmarksRef.current) {
           drawConnections(ctx, landmarksRef.current, canvas.width, canvas.height);
           drawKeypoints(ctx, landmarksRef.current, canvas.width, canvas.height);
+          drawAngles(ctx, landmarksRef.current, anglesRef.current, canvas.width, canvas.height);
         }
 
         // FPS calculation
         const now = performance.now();
         frameTimesRef.current.push(now);
-        // Keep only timestamps from the last second
         frameTimesRef.current = frameTimesRef.current.filter((t) => now - t < 1000);
         const currentFps = frameTimesRef.current.length;
         fpsRef.current = currentFps;
 
-        // Update React FPS display at most ~4× per second to avoid churn
+        // Update React displays ~4× per second
         if (Math.random() < 0.15) {
           setFps(currentFps);
+          setCurlDisplay({
+            leftReps:   leftCurlRef.current.reps,
+            rightReps:  rightCurlRef.current.reps,
+            leftStage:  leftCurlRef.current.stage,
+            rightStage: rightCurlRef.current.stage,
+            leftAngle:  anglesRef.current.leftAngle,
+            rightAngle: anglesRef.current.rightAngle,
+          });
         }
       }
 
       rafIdRef.current = requestAnimationFrame(loop);
     }
 
-    // Kick off the loop
     rafIdRef.current = requestAnimationFrame(loop);
 
     return () => {
       running = false;
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
+  }, []);
+
+  /* ── Reset counter ─────────────────────────────────────────── */
+  const handleReset = useCallback(() => {
+    leftCurlRef.current  = { reps: 0, stage: null };
+    rightCurlRef.current = { reps: 0, stage: null };
+    setCurlDisplay({
+      leftReps: 0, rightReps: 0,
+      leftStage: null, rightStage: null,
+      leftAngle: null, rightAngle: null,
+    });
   }, []);
 
   /* ── Camera error handler ──────────────────────────────────── */
@@ -181,8 +207,6 @@ function CameraView() {
   }, []);
 
   /* ── Render ────────────────────────────────────────────────── */
-
-  // Fallback when camera permission is denied
   if (cameraError) {
     return (
       <div className="camera-view">
@@ -198,66 +222,124 @@ function CameraView() {
     );
   }
 
+  const totalReps = curlDisplay.leftReps + curlDisplay.rightReps;
+
   return (
     <div className="camera-view">
       {/* Header */}
       <header className="header">
-        <h1 className="header-title">Pose Detection</h1>
-        <p className="header-subtitle">Real-time skeleton tracking</p>
+        <h1 className="header-title">NutriFit Pose Tracker</h1>
+        <p className="header-subtitle">Real-time skeleton tracking &amp; curl counter</p>
       </header>
 
-      {/* Video + Canvas container – sized to actual video resolution */}
-      <div
-        className="video-container"
-        style={{
-          width: '100%',
-          maxWidth: videoDims.width,
-          aspectRatio: `${videoDims.width} / ${videoDims.height}`,
-        }}
-      >
-        {/* Loading overlay */}
-        {loading && (
-          <div className="loading-overlay">
-            <div className="spinner" />
-            <p>Loading pose model…</p>
-          </div>
-        )}
-
-        {/* Webcam (mirrored) */}
-        <Webcam
-          ref={webcamRef}
-          audio={false}
-          mirrored={true}
-          width={videoDims.width}
-          height={videoDims.height}
-          videoConstraints={{
-            width: { ideal: REQUESTED_WIDTH },
-            height: { ideal: REQUESTED_HEIGHT },
-            facingMode: 'user',
+      <div className="main-content">
+        {/* Video + Canvas container */}
+        <div
+          className="video-container"
+          style={{
+            width: '100%',
+            maxWidth: videoDims.width,
+            aspectRatio: `${videoDims.width} / ${videoDims.height}`,
           }}
-          onUserMediaError={handleCameraError}
-          onLoadedData={handleVideoReady}
-          className="webcam-video"
-        />
+        >
+          {loading && (
+            <div className="loading-overlay">
+              <div className="spinner" />
+              <p>Loading pose model…</p>
+            </div>
+          )}
 
-        {/* Canvas overlay – sits directly on top of the video */}
-        <canvas
-          ref={canvasRef}
-          className="pose-canvas"
-        />
+          <Webcam
+            ref={webcamRef}
+            audio={false}
+            mirrored={true}
+            width={videoDims.width}
+            height={videoDims.height}
+            videoConstraints={{
+              width: { ideal: REQUESTED_WIDTH },
+              height: { ideal: REQUESTED_HEIGHT },
+              facingMode: 'user',
+            }}
+            onUserMediaError={handleCameraError}
+            onLoadedData={handleVideoReady}
+            className="webcam-video"
+          />
 
-        {/* FPS counter */}
-        <div className="fps-counter" id="fps-counter">
-          {fps} FPS
+          <canvas ref={canvasRef} className="pose-canvas" />
+
+          {/* FPS counter */}
+          <div className="fps-counter" id="fps-counter">
+            {fps} FPS
+          </div>
+
+          {/* Pose status badge */}
+          <div
+            className={`status-badge ${poseDetected ? 'detected' : 'not-detected'}`}
+            id="status-badge"
+          >
+            <span className="status-dot" />
+            {poseDetected ? 'Pose Detected' : 'No Person Detected'}
+          </div>
         </div>
 
-        {/* Pose status badge */}
-        <div
-          className={`status-badge ${poseDetected ? 'detected' : 'not-detected'}`}
-          id="status-badge"
-        >
-          <span className="status-dot" />
-          {poseDetected ? 'Pose Detected' : 'No Person Detected'}
+        {/* ── Curl Counter Panel ────────────────────────────────── */}
+        <div className="curl-panel">
+          <h2 className="curl-panel-title">Bicep Curls</h2>
+
+          {/* Total reps */}
+          <div className="total-reps">
+            <span className="total-reps-number">{totalReps}</span>
+            <span className="total-reps-label">Total Reps</span>
+          </div>
+
+          {/* Left arm */}
+          <div className="arm-card">
+            <div className="arm-card-header">
+              <span className="arm-label">Left Arm</span>
+              <span className={`arm-stage ${curlDisplay.leftStage || ''}`}>
+                {curlDisplay.leftStage || '—'}
+              </span>
+            </div>
+            <div className="arm-card-body">
+              <div className="arm-stat">
+                <span className="arm-stat-value">{curlDisplay.leftReps}</span>
+                <span className="arm-stat-label">Reps</span>
+              </div>
+              <div className="arm-stat">
+                <span className="arm-stat-value">
+                  {curlDisplay.leftAngle !== null ? `${Math.round(curlDisplay.leftAngle)}°` : '—'}
+                </span>
+                <span className="arm-stat-label">Angle</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right arm */}
+          <div className="arm-card">
+            <div className="arm-card-header">
+              <span className="arm-label">Right Arm</span>
+              <span className={`arm-stage ${curlDisplay.rightStage || ''}`}>
+                {curlDisplay.rightStage || '—'}
+              </span>
+            </div>
+            <div className="arm-card-body">
+              <div className="arm-stat">
+                <span className="arm-stat-value">{curlDisplay.rightReps}</span>
+                <span className="arm-stat-label">Reps</span>
+              </div>
+              <div className="arm-stat">
+                <span className="arm-stat-value">
+                  {curlDisplay.rightAngle !== null ? `${Math.round(curlDisplay.rightAngle)}°` : '—'}
+                </span>
+                <span className="arm-stat-label">Angle</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Reset button */}
+          <button className="reset-btn" onClick={handleReset} id="reset-btn">
+            Reset Counter
+          </button>
         </div>
       </div>
     </div>
