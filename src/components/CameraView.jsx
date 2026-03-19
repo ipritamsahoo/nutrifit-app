@@ -1,0 +1,232 @@
+/**
+ * CameraView.jsx
+ * ===============
+ * Main component that:
+ *   1. Opens the webcam via react-webcam
+ *   2. Sends frames to MediaPipe Pose for landmark detection
+ *   3. Draws a real-time skeleton overlay on a <canvas>
+ *   4. Shows a status badge ("Pose Detected" / "No Person Detected")
+ *   5. Shows an FPS counter
+ *
+ * Performance notes:
+ *   - Landmarks are stored in a useRef (no re-renders per frame).
+ *   - Drawing is done directly on the canvas via requestAnimationFrame.
+ *   - React state is only updated when the detection status *changes*.
+ */
+
+import { useRef, useEffect, useState, useCallback } from 'react';
+import Webcam from 'react-webcam';
+import { createPoseDetector } from '../utils/poseUtils';
+import { clearCanvas, drawKeypoints, drawConnections } from '../utils/drawUtils';
+import './CameraView.css';
+
+/* ── Constants ──────────────────────────────────────────────────── */
+const VIDEO_WIDTH  = 640;
+const VIDEO_HEIGHT = 480;
+
+function CameraView() {
+  /* ── Refs (no re-renders) ───────────────────────────────────── */
+  const webcamRef    = useRef(null);
+  const canvasRef    = useRef(null);
+  const landmarksRef = useRef(null);   // latest landmarks snapshot
+  const poseRef      = useRef(null);   // { pose, sendFrame }
+  const rafIdRef     = useRef(null);   // requestAnimationFrame ID
+  const fpsRef       = useRef(0);      // current FPS value
+  const frameTimesRef = useRef([]);    // timestamps for FPS calculation
+
+  /* ── State (UI badges only – updated infrequently) ──────────── */
+  const [poseDetected, setPoseDetected] = useState(false);
+  const [cameraError, setCameraError]   = useState(false);
+  const [fps, setFps]                   = useState(0);
+  const [loading, setLoading]           = useState(true);
+
+  // Track whether we've received the first result (to dismiss loading)
+  const firstResultRef = useRef(false);
+
+  /* ── MediaPipe onResults callback ──────────────────────────── */
+  const handleResults = useCallback((results) => {
+    // Dismiss loading spinner on first result (model is now warm)
+    if (!firstResultRef.current) {
+      firstResultRef.current = true;
+      setLoading(false);
+      console.log('[PoseDetection] MediaPipe model loaded & first result received');
+    }
+
+    const hasLandmarks =
+      results.poseLandmarks && results.poseLandmarks.length > 0;
+
+    // Store in ref for the draw loop (no re-render)
+    landmarksRef.current = hasLandmarks ? results.poseLandmarks : null;
+
+    // Only update React state when status actually changes
+    setPoseDetected((prev) => {
+      if (prev !== hasLandmarks) return hasLandmarks;
+      return prev;
+    });
+
+    // Log landmarks for debugging (throttled to avoid console flood)
+    if (hasLandmarks && Math.random() < 0.02) {
+      console.log('[PoseDetection] Landmarks:', results.poseLandmarks);
+    }
+  }, []);
+
+  /* ── Initialise MediaPipe Pose ─────────────────────────────── */
+  useEffect(() => {
+    const { pose, sendFrame } = createPoseDetector(handleResults);
+    poseRef.current = { pose, sendFrame };
+    console.log('[PoseDetection] Pose detector created, waiting for first frame…');
+
+    return () => {
+      pose.close();
+    };
+  }, [handleResults]);
+
+  /* ── Detection + draw loop ─────────────────────────────────── */
+  useEffect(() => {
+    let running = true;
+
+    async function loop() {
+      if (!running) return;
+
+      const video = webcamRef.current?.video;
+      const canvas = canvasRef.current;
+
+      if (video && canvas && poseRef.current) {
+        const ctx = canvas.getContext('2d');
+
+        // Make sure canvas dimensions match the video
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width  = video.videoWidth  || VIDEO_WIDTH;
+          canvas.height = video.videoHeight || VIDEO_HEIGHT;
+        }
+
+        // Send the current frame to MediaPipe (async)
+        try {
+          await poseRef.current.sendFrame(video);
+        } catch (err) {
+          // Silently handle transient frame-send errors
+          console.warn('[PoseDetection] Frame send error:', err);
+        }
+
+        // Draw on canvas
+        clearCanvas(ctx, canvas.width, canvas.height);
+
+        if (landmarksRef.current) {
+          drawConnections(ctx, landmarksRef.current, canvas.width, canvas.height);
+          drawKeypoints(ctx, landmarksRef.current, canvas.width, canvas.height);
+        }
+
+        // FPS calculation
+        const now = performance.now();
+        frameTimesRef.current.push(now);
+        // Keep only timestamps from the last second
+        frameTimesRef.current = frameTimesRef.current.filter((t) => now - t < 1000);
+        const currentFps = frameTimesRef.current.length;
+        fpsRef.current = currentFps;
+
+        // Update React FPS display at most ~4× per second to avoid churn
+        if (Math.random() < 0.15) {
+          setFps(currentFps);
+        }
+      }
+
+      rafIdRef.current = requestAnimationFrame(loop);
+    }
+
+    // Kick off the loop
+    rafIdRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      running = false;
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+    };
+  }, []);
+
+  /* ── Camera error handler ──────────────────────────────────── */
+  const handleCameraError = useCallback((err) => {
+    console.error('[CameraView] Camera error:', err);
+    setCameraError(true);
+  }, []);
+
+  /* ── Render ────────────────────────────────────────────────── */
+
+  // Fallback when camera permission is denied
+  if (cameraError) {
+    return (
+      <div className="camera-view">
+        <div className="camera-error">
+          <div className="error-icon">🎥</div>
+          <h2>Camera Access Required</h2>
+          <p>
+            Please allow camera permission in your browser settings and reload
+            the page to use pose detection.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="camera-view">
+      {/* Header */}
+      <header className="header">
+        <h1 className="header-title">Pose Detection</h1>
+        <p className="header-subtitle">Real-time skeleton tracking</p>
+      </header>
+
+      {/* Video + Canvas container */}
+      <div
+        className="video-container"
+        style={{ width: VIDEO_WIDTH, height: VIDEO_HEIGHT }}
+      >
+        {/* Loading overlay */}
+        {loading && (
+          <div className="loading-overlay">
+            <div className="spinner" />
+            <p>Loading pose model…</p>
+          </div>
+        )}
+
+        {/* Webcam (mirrored) */}
+        <Webcam
+          ref={webcamRef}
+          audio={false}
+          mirrored={true}
+          width={VIDEO_WIDTH}
+          height={VIDEO_HEIGHT}
+          videoConstraints={{
+            width: VIDEO_WIDTH,
+            height: VIDEO_HEIGHT,
+            facingMode: 'user',
+          }}
+          onUserMediaError={handleCameraError}
+          className="webcam-video"
+        />
+
+        {/* Canvas overlay – sits directly on top of the video */}
+        <canvas
+          ref={canvasRef}
+          className="pose-canvas"
+          width={VIDEO_WIDTH}
+          height={VIDEO_HEIGHT}
+        />
+
+        {/* FPS counter */}
+        <div className="fps-counter" id="fps-counter">
+          {fps} FPS
+        </div>
+
+        {/* Pose status badge */}
+        <div
+          className={`status-badge ${poseDetected ? 'detected' : 'not-detected'}`}
+          id="status-badge"
+        >
+          <span className="status-dot" />
+          {poseDetected ? 'Pose Detected' : 'No Person Detected'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default CameraView;
