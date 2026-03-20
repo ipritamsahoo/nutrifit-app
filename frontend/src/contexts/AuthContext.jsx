@@ -2,7 +2,7 @@
  * AuthContext.jsx
  * ===============
  * Provides Firebase Auth state to the entire app via React Context.
- * Exposes: currentUser, loading, login, signup, logout, role.
+ * Exposes: currentUser, loading, login, signup, logout, userRole.
  */
 
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -23,7 +23,7 @@ export function useAuth() {
 
 export default function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [userRole, setUserRole] = useState(null); // 'patient' | 'doctor'
+  const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
   /* ── Listen for auth state changes ─────────────────────────── */
@@ -31,10 +31,13 @@ export default function AuthProvider({ children }) {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
-        // Fetch the user's role from Firestore
-        const snap = await getDoc(doc(db, 'users', user.uid));
-        if (snap.exists()) {
-          setUserRole(snap.data().role);
+        try {
+          const snap = await getDoc(doc(db, 'users', user.uid));
+          if (snap.exists()) {
+            setUserRole(snap.data().role);
+          }
+        } catch (err) {
+          console.warn('[Auth] Could not fetch user role:', err);
         }
       } else {
         setUserRole(null);
@@ -47,20 +50,46 @@ export default function AuthProvider({ children }) {
   /* ── Auth helpers ──────────────────────────────────────────── */
   async function signup(email, password, name, role) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    // Create a user profile document in Firestore
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      uid: cred.user.uid,
-      name,
-      role,          // 'patient' or 'doctor'
-      bio: '',
-      createdAt: new Date().toISOString(),
-    });
+
+    // Write user profile to Firestore
+    // Wrapped in try/catch so auth still succeeds even if Firestore write fails
+    try {
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        uid: cred.user.uid,
+        name,
+        role,
+        bio: '',
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('[Auth] Firestore user doc write failed:', err);
+    }
+
+    // Manually set state so we don't rely on onAuthStateChanged race
+    setCurrentUser(cred.user);
     setUserRole(role);
+    setLoading(false);
+
     return cred;
   }
 
-  function login(email, password) {
-    return signInWithEmailAndPassword(auth, email, password);
+  async function login(email, password) {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+
+    // Fetch role immediately so it's ready before navigation
+    try {
+      const snap = await getDoc(doc(db, 'users', cred.user.uid));
+      if (snap.exists()) {
+        setUserRole(snap.data().role);
+      }
+    } catch (err) {
+      console.warn('[Auth] Could not fetch user role on login:', err);
+    }
+
+    setCurrentUser(cred.user);
+    setLoading(false);
+
+    return cred;
   }
 
   function logout() {
