@@ -218,3 +218,86 @@
   color: #888;
   line-height: 1.5;
 }
+
+/* ── New Header Bar ───────────────────────────────────────────── */
+.cv-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  z-index: 3;
+  position: relative;
+}
+.cv-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #00ffaa, #00ccff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.cv-stats { display: flex; align-items: center; }
+.cv-reps-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 14px;
+  padding: 6px 18px;
+}
+.reps-num {
+  font-size: 28px;
+  font-weight: 700;
+  color: #a5b4fc;
+  line-height: 1;
+}
+.reps-label {
+  font-size: 10px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ── Back / Save Button ───────────────────────────────────────── */
+.btn-back {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d1d5db;
+  padding: 8px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.btn-back:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.btn-back:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Exercise Selector ────────────────────────────────────────── */
+.exercise-selector {
+  display: flex;
+  gap: 8px;
+  z-index: 2;
+  margin-bottom: 12px;
+}
+.ex-btn {
+  padding: 8px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #9ca3af;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ex-btn.active {
+  background: rgba(0, 255, 170, 0.12);
+  border-color: rgba(0, 255, 170, 0.3);
+  color: #00ffaa;
+}
+.ex-btn:hover { background: rgba(255, 255, 255, 0.08); }
+

@@ -190,3 +190,40 @@
 .toggle-btn:hover {
   text-decoration: underline;
 }
+
+/* Google Login */
+.google-btn {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e0e0e0;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+  transition: all 0.2s;
+}
+.google-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.google-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Hint for patients */
+.login-hint {
+  text-align: center;
+  margin-top: 14px;
+}
+.login-hint small {
+  color: #6b7280;
+  font-size: 12px;
+}

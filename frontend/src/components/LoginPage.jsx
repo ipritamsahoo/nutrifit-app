@@ -1,7 +1,14 @@
 /**
  * LoginPage.jsx
  * =============
- * Auth page: Login / Signup with role selection (Patient or Doctor).
+ * Auth page with TWO signup paths:
+ *   1. Doctor signup – selects "I am a Doctor" and creates own account.
+ *   2. Outsider signup – selects "I am a Fitness Enthusiast" (self-user).
+ *   3. Google login – auto-creates an outsider profile.
+ *
+ * Insiders (patients) do NOT sign up here. They login with credentials
+ * provided by their Doctor.
+ *
  * Premium dark glassmorphism UI.
  */
 
@@ -18,7 +25,7 @@ export default function LoginPage() {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [name, setName]         = useState('');
-  const [role, setRole]         = useState('patient');
+  const [role, setRole]         = useState('outsider');  // default for self-signup
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
@@ -29,8 +36,10 @@ export default function LoginPage() {
 
     try {
       if (isSignup) {
+        // Only doctors and outsiders can self-signup
         await signup(email, password, name, role);
       } else {
+        // Login works for ALL roles (doctor, insider, outsider)
         await login(email, password);
       }
       navigate('/');
@@ -40,6 +49,7 @@ export default function LoginPage() {
       setLoading(false);
     }
   }
+
 
   return (
     <div className="login-page">
@@ -51,7 +61,7 @@ export default function LoginPage() {
       <div className="login-card">
         <div className="login-brand">
           <span className="brand-icon">💪</span>
-          <h1>NutriFit</h1>
+          <h1>HonFit</h1>
           <p>AI-Powered Fitness & Health</p>
         </div>
 
@@ -78,10 +88,10 @@ export default function LoginPage() {
                 <div className="role-toggle">
                   <button
                     type="button"
-                    className={role === 'patient' ? 'active' : ''}
-                    onClick={() => setRole('patient')}
+                    className={role === 'outsider' ? 'active' : ''}
+                    onClick={() => setRole('outsider')}
                   >
-                    🏃 Patient
+                    🏃 Fitness Enthusiast
                   </button>
                   <button
                     type="button"
@@ -122,6 +132,13 @@ export default function LoginPage() {
             {loading ? 'Please wait…' : isSignup ? 'Sign Up' : 'Log In'}
           </button>
         </form>
+
+
+        {!isSignup && (
+          <p className="login-hint">
+            <small>💡 Patients: Use the email & password your Doctor provided.</small>
+          </p>
+        )}
 
         <p className="toggle-text">
           {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}

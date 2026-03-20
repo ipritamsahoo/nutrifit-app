@@ -11,15 +11,17 @@ Encapsulates all Google Gemini API logic.
 import os
 import json
 import re
-import google.generativeai as genai
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+_MODEL_NAME = "google/gemma-3n-e4b-it"
 
-# Use a model that supports JSON output well
-_MODEL_NAME = "gemini-1.5-flash"
+client = OpenAI(
+  base_url="https://integrate.api.nvidia.com/v1",
+  api_key=os.getenv("NVIDIA_API_KEY")
+)
 
 
 def _build_prompt(age: int, weight: float, height: float, goal: str, medical_conditions: str = "") -> str:
@@ -90,10 +92,16 @@ def generate_plan(age: int, weight: float, height: float, goal: str, medical_con
     """
     prompt = _build_prompt(age, weight, height, goal, medical_conditions)
 
-    model = genai.GenerativeModel(_MODEL_NAME)
-    response = model.generate_content(prompt)
-
-    raw_text = response.text.strip()
+    try:
+        response = client.chat.completions.create(
+            model=_MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=2048
+        )
+        raw_text = response.choices[0].message.content.strip()
+    except Exception as e:
+        raise ValueError(f"OpenAI API call failed: {e}")
 
     # Strip markdown code fences if Gemini wraps the output
     raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)

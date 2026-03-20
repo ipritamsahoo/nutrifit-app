@@ -1,33 +1,63 @@
 /**
  * App.jsx
  * =======
- * Root component with React Router.
+ * Root component with role-based routing.
+ *
  * Routes:
- *   /login       → LoginPage
- *   /onboarding  → OnboardingForm (patient metrics)
- *   /workout     → CameraView (pose tracking)
- *   /            → Dashboard (patient plan view)
+ *   /login            → LoginPage (public)
+ *   /                 → Redirects based on role:
+ *                        doctor   → /doctor
+ *                        insider  → /workspace
+ *                        outsider → /chat (if no plan) or /workspace (if plan exists)
+ *   /doctor           → DoctorDashboard (doctor only)
+ *   /doctor/patient/:id → Patient detail & prescription
+ *   /workspace        → Workspace / Today's Tasks (insider & outsider)
+ *   /chat             → Virtual Coach Chatbot (outsider only)
+ *   /workout          → CameraView / MediaPipe AI Trainer
  */
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AuthProvider, { useAuth } from './contexts/AuthContext';
 import LoginPage from './components/LoginPage';
-import OnboardingForm from './components/OnboardingForm';
-import Dashboard from './components/Dashboard';
+import DoctorDashboard from './components/DoctorDashboard';
+import InsiderWorkspace from './components/InsiderWorkspace';
+import OutsiderChatbot from './components/OutsiderChatbot';
 import CameraView from './components/CameraView';
 
-/* ── Protected route wrapper ──────────────────────────────── */
-function PrivateRoute({ children }) {
-  const { currentUser, loading } = useAuth();
+/* ── Role-based Protected Route ──────────────────────────────── */
+function PrivateRoute({ children, allowedRoles }) {
+  const { currentUser, userRole, loading } = useAuth();
   if (loading) return null;
-  return currentUser ? children : <Navigate to="/login" />;
+  if (!currentUser) return <Navigate to="/login" />;
+  if (allowedRoles && !allowedRoles.includes(userRole)) {
+    // Redirect to their own home if they try to access a wrong route
+    return <Navigate to="/" />;
+  }
+  return children;
 }
 
-/* ── Public route (redirect if logged in) ─────────────────── */
+/* ── Public route (redirect if already logged in) ────────────── */
 function PublicRoute({ children }) {
   const { currentUser, loading } = useAuth();
   if (loading) return null;
   return currentUser ? <Navigate to="/" /> : children;
+}
+
+/* ── Smart Home Redirect based on role ───────────────────────── */
+function HomeRedirect() {
+  const { userRole, hasPlan, loading } = useAuth();
+  if (loading) return null;
+
+  switch (userRole) {
+    case 'doctor':
+      return <Navigate to="/doctor" replace />;
+    case 'insider':
+      return <Navigate to="/workspace" replace />;
+    case 'outsider':
+      return hasPlan ? <Navigate to="/workspace" replace /> : <Navigate to="/chat" replace />;
+    default:
+      return <Navigate to="/login" replace />;
+  }
 }
 
 function App() {
@@ -35,10 +65,41 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          {/* Public */}
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-          <Route path="/onboarding" element={<PrivateRoute><OnboardingForm /></PrivateRoute>} />
-          <Route path="/workout" element={<PrivateRoute><CameraView /></PrivateRoute>} />
-          <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+
+          {/* Smart home redirect */}
+          <Route path="/" element={<PrivateRoute><HomeRedirect /></PrivateRoute>} />
+
+          {/* Doctor routes */}
+          <Route path="/doctor" element={
+            <PrivateRoute allowedRoles={['doctor']}>
+              <DoctorDashboard />
+            </PrivateRoute>
+          } />
+
+          {/* Outsider chatbot */}
+          <Route path="/chat" element={
+            <PrivateRoute allowedRoles={['outsider']}>
+              <OutsiderChatbot />
+            </PrivateRoute>
+          } />
+
+          {/* Workspace – for insiders (doctor's patients) and outsiders (after plan approval) */}
+          <Route path="/workspace" element={
+            <PrivateRoute allowedRoles={['insider', 'outsider']}>
+              <InsiderWorkspace />
+            </PrivateRoute>
+          } />
+
+          {/* Workout camera – all members */}
+          <Route path="/workout" element={
+            <PrivateRoute allowedRoles={['insider', 'outsider']}>
+              <CameraView />
+            </PrivateRoute>
+          } />
+
+          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AuthProvider>
