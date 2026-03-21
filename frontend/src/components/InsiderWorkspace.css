@@ -5,7 +5,6 @@
   background: #0a0a0a;
   color: #f0f0f0;
   position: relative;
-  overflow-x: hidden;
 }
 
 /* ── Header ──────────────────────────────────────── */
@@ -220,7 +219,7 @@
 .no-data { color: #6b7280; font-size: 14px; font-style: italic; }
 
 /* Start Workout Button */
-.start-workout-btn {
+.task-card .start-workout-btn {
   margin: 0 22px 18px;
   width: calc(100% - 44px);
 }
