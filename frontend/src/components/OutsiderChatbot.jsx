@@ -161,6 +161,11 @@ export default function OutsiderChatbot() {
       <div className="bg-blob blob-1" />
       <div className="bg-blob blob-2" />
 
+      {/* Floating Dashboard Button */}
+      <button className="floating-dashboard-btn" onClick={() => navigate('/workspace')}>
+        📊 Dashboard
+      </button>
+
       {/* Header */}
       <header className="chat-header">
         <div className="chat-brand">
@@ -168,8 +173,8 @@ export default function OutsiderChatbot() {
           <h1>HonFit — Virtual Coach</h1>
         </div>
         <div className="chat-actions">
-          <button className="btn-outline" onClick={() => navigate('/workspace')}>
-            📋 My Workspace
+          <button className="btn-dashboard" onClick={() => navigate('/workspace')}>
+            📊 Dashboard
           </button>
           <button className="btn-ghost" onClick={handleLogout}>Logout</button>
         </div>
