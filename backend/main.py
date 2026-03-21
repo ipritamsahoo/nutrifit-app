@@ -13,6 +13,7 @@ Endpoints:
 """
 
 from fastapi import FastAPI, HTTPException, Header
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -51,6 +52,10 @@ app.add_middleware(
 # ── Wger API Config ──────────────────────────────────────────────────
 WGER_API_BASE = "https://wger.de/api/v2"
 WGER_API_KEY = os.getenv("WGER_API_KEY", "")
+
+# ── ExerciseDB (RapidAPI) Config ─────────────────────────────────────
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
+EXERCISEDB_HOST = "exercisedb.p.rapidapi.com"
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -442,3 +447,100 @@ async def approve_plan(plan_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to approve plan: {e}")
 
+
+# ── 7. EXERCISE GIF (ExerciseDB via RapidAPI) ───────────────────────
+@app.get("/exercise-gif")
+async def get_exercise_gif(name: str):
+    """
+    Search ExerciseDB for an exercise by name and return its exercise ID.
+    The frontend uses this ID with /exercise-gif-image/{id} to show the GIF.
+    """
+    if not RAPIDAPI_KEY:
+        return {"exercise_id": None, "error": "RAPIDAPI_KEY not configured"}
+
+    try:
+        # Normalize: lowercase, remove hyphens, strip trailing 's' for plurals
+        search_name = name.strip().lower().replace("-", " ")
+        # Try without trailing 's' (Push-ups → push up, Squats → squat)
+        alt_name = search_name.rstrip("s").strip() if search_name.endswith("s") else None
+        # Word-by-word fallback: try the last significant word (e.g., "Dumbbell Rows" → "row")
+        words = search_name.split()
+        last_word = words[-1].rstrip("s") if words else None
+
+        headers = {
+            "X-RapidAPI-Key": RAPIDAPI_KEY,
+            "X-RapidAPI-Host": EXERCISEDB_HOST,
+        }
+
+        async with httpx.AsyncClient() as client:
+            # Attempt 1: Full name
+            resp = await client.get(
+                f"https://{EXERCISEDB_HOST}/exercises/name/{search_name}",
+                headers=headers, timeout=15.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            # Attempt 2: Without trailing 's'
+            if (not data or len(data) == 0) and alt_name and alt_name != search_name:
+                resp = await client.get(
+                    f"https://{EXERCISEDB_HOST}/exercises/name/{alt_name}",
+                    headers=headers, timeout=15.0,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+
+            # Attempt 3: Last word only (e.g., "dumbbell rows" → "row")
+            if (not data or len(data) == 0) and last_word and last_word != search_name and last_word != alt_name:
+                resp = await client.get(
+                    f"https://{EXERCISEDB_HOST}/exercises/name/{last_word}",
+                    headers=headers, timeout=15.0,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+
+        if data and len(data) > 0:
+            exercise_id = data[0].get("id")
+            return {"exercise_id": exercise_id}
+
+        return {"exercise_id": None}
+
+    except httpx.HTTPStatusError as e:
+        print(f"[ExerciseGIF] Search API error: {e.response.status_code}")
+        return {"exercise_id": None}
+    except Exception as e:
+        print(f"[ExerciseGIF] Error: {e}")
+        return {"exercise_id": None}
+
+
+@app.get("/exercise-gif-image/{exercise_id}")
+async def get_exercise_gif_image(exercise_id: str):
+    """
+    Proxy the animated GIF from ExerciseDB so the frontend can use it
+    in an <img> tag without needing API keys.
+    """
+    if not RAPIDAPI_KEY:
+        raise HTTPException(status_code=503, detail="RAPIDAPI_KEY not configured")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://{EXERCISEDB_HOST}/image",
+                params={"exerciseId": exercise_id, "resolution": "360"},
+                headers={
+                    "X-RapidAPI-Key": RAPIDAPI_KEY,
+                    "X-RapidAPI-Host": EXERCISEDB_HOST,
+                },
+                timeout=30.0,
+            )
+            resp.raise_for_status()
+
+        return StreamingResponse(
+            iter([resp.content]),
+            media_type="image/gif",
+            headers={"Cache-Control": "public, max-age=86400"},  # Cache for 24h
+        )
+
+    except Exception as e:
+        print(f"[ExerciseGIF] Image proxy error: {e}")
+        raise HTTPException(status_code=502, detail="Failed to fetch exercise GIF")
