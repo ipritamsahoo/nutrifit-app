@@ -11,7 +11,7 @@
  * Exposes: currentUser, loading, login, signup, logout, userRole, userData.
  */
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -33,12 +33,16 @@ export default function AuthProvider({ children }) {
   const [userData, setUserData] = useState(null);    // full Firestore user doc
   const [hasPlan, setHasPlan] = useState(false);     // whether outsider has a plan
   const [loading, setLoading] = useState(true);
+  const isAuthAction = useRef(false); // Flags when we are manually signing up/logging in
 
   /* ── Listen for auth state changes ─────────────────────────── */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
+      if (isAuthAction.current) return; // Ignore if signup/login action is currently handling the state
+
       setCurrentUser(user);
       if (user) {
+        setLoading(true); // Buffer the UI while loading the role
         try {
           const snap = await getDoc(doc(db, 'users', user.uid));
           if (snap.exists()) {
@@ -63,60 +67,68 @@ export default function AuthProvider({ children }) {
     return unsub;
   }, []);
 
-  /* ── Auth helpers ──────────────────────────────────────────── */
-
   /**
    * signup – used by DOCTORS and OUTSIDERS only.
    * Insiders are created by Doctors via the backend (Firebase Admin SDK).
    */
   async function signup(email, password, name, role) {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-
-    const userDoc = {
-      uid: cred.user.uid,
-      name,
-      email,
-      role,          // "doctor" or "outsider"
-      bio: '',
-      createdAt: new Date().toISOString(),
-    };
-
+    isAuthAction.current = true;
+    setLoading(true);
     try {
-      await setDoc(doc(db, 'users', cred.user.uid), userDoc);
-    } catch (err) {
-      console.error('[Auth] Firestore user doc write failed:', err);
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+      const userDoc = {
+        uid: cred.user.uid,
+        name,
+        email,
+        role,          // "doctor" or "outsider"
+        bio: '',
+        createdAt: new Date().toISOString(),
+      };
+
+      try {
+        await setDoc(doc(db, 'users', cred.user.uid), userDoc);
+      } catch (err) {
+        console.error('[Auth] Firestore user doc write failed:', err);
+      }
+
+      setCurrentUser(cred.user);
+      setUserRole(role);
+      setUserData(userDoc);
+      return cred;
+    } finally {
+      setLoading(false);
+      isAuthAction.current = false;
     }
-
-    setCurrentUser(cred.user);
-    setUserRole(role);
-    setUserData(userDoc);
-    setLoading(false);
-
-    return cred;
   }
 
   async function login(email, password) {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-
+    isAuthAction.current = true;
+    setLoading(true);
     try {
-      const snap = await getDoc(doc(db, 'users', cred.user.uid));
-      if (snap.exists()) {
-        const data = snap.data();
-        setUserRole(data.role);
-        setUserData(data);
+      const cred = await signInWithEmailAndPassword(auth, email, password);
 
-        const planQ = query(collection(db, 'plans'), where('uid', '==', cred.user.uid), limit(1));
-        const planSnap = await getDocs(planQ);
-        setHasPlan(!planSnap.empty);
+      try {
+        const snap = await getDoc(doc(db, 'users', cred.user.uid));
+        if (snap.exists()) {
+          const data = snap.data();
+          setUserRole(data.role);
+          setUserData(data);
+
+          const planQ = query(collection(db, 'plans'), where('uid', '==', cred.user.uid), limit(1));
+          const planSnap = await getDocs(planQ);
+          setHasPlan(!planSnap.empty);
+        }
+      } catch (err) {
+        console.warn('[Auth] Could not fetch user role on login:', err);
       }
-    } catch (err) {
-      console.warn('[Auth] Could not fetch user role on login:', err);
+
+      setCurrentUser(cred.user);
+      return cred;
+    } finally {
+      setLoading(false);
+      isAuthAction.current = false;
     }
-
-    setCurrentUser(cred.user);
-    setLoading(false);
-
-    return cred;
   }
 
   function logout() {
