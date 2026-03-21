@@ -80,15 +80,14 @@ def chat_with_coach(messages: list[dict]) -> str:
     Returns: assistant's response text
     """
     cleaned = []
-    started = False
+    initial_greeting = None
     for msg in messages:
-        if not started and msg["role"] == "model":
-            continue
-        started = True
-        
-        # Map Gemini roles from frontend to OpenAI roles
         role = "assistant" if msg["role"] == "model" else "user"
         content = msg["parts"][0]
+        # Capture the first assistant message (hardcoded greeting from frontend)
+        if initial_greeting is None and role == "assistant":
+            initial_greeting = content
+            continue
         cleaned.append({"role": role, "content": content})
 
     if not cleaned:
@@ -104,8 +103,17 @@ def chat_with_coach(messages: list[dict]) -> str:
         )
         return response.choices[0].message.content
 
-    # Prepend system prompt to the user history
-    openai_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + cleaned
+    # Build the message list for the API.
+    # The API requires strict user/assistant alternation starting with user.
+    # If we have an initial greeting from the frontend, insert a synthetic
+    # user opener ("Hello!") before the greeting so:
+    #   system → user("Hello!") → assistant(greeting) → user(actual msg) → ...
+    # This way the AI sees its own greeting as a real turn and won't re-greet.
+    openai_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    if initial_greeting:
+        openai_messages.append({"role": "user", "content": "Hello!"})
+        openai_messages.append({"role": "assistant", "content": initial_greeting})
+    openai_messages.extend(cleaned)
 
     try:
         response = client.chat.completions.create(

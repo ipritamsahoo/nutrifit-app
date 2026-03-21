@@ -77,7 +77,7 @@ export default function OutsiderChatbot() {
       }]);
     } finally {
       setLoading(false);
-      inputRef.current?.focus();
+      setTimeout(() => inputRef.current?.focus(), 0);
     }
   }
 
