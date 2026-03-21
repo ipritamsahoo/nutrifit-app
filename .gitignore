@@ -3,3 +3,15 @@ node_modules
 *.log
 *.env
 backend/serviceAccountKey.json
+
+# Backend (Python) ignores
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# OS & Editor files
+.DS_Store
+.vscode/
+.idea/
