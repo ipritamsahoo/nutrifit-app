@@ -14,11 +14,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-_MODEL_NAME = "google/gemma-3n-e4b-it"
+_MODEL_NAME = "stepfun/step-3.5-flash:free"
+
+_api_key = os.getenv("OPENROUTER_API_KEY")
+if not _api_key:
+    print("[Chat] WARNING: OPENROUTER_API_KEY not found in environment!")
+    _api_key = "sk-missing"
 
 client = OpenAI(
-  base_url="https://integrate.api.nvidia.com/v1",
-  api_key=os.getenv("NVIDIA_API_KEY")
+  base_url="https://openrouter.ai/api/v1",
+  api_key=_api_key,
+  timeout=60.0,
+  default_headers={
+      "HTTP-Referer": "http://localhost:5173",
+      "X-Title": "HonFit Virtual Coach",
+  }
 )
 
 SYSTEM_PROMPT = """You are HonFit Virtual Coach — a friendly, professional AI fitness and nutrition coach.
@@ -79,16 +89,16 @@ def chat_with_coach(messages: list[dict]) -> str:
     messages: list of {"role": "user"|"model", "parts": ["text"]} (from frontend)
     Returns: assistant's response text
     """
-    cleaned = []
+    cleaned: list[dict[str, str]] = []
     initial_greeting = None
     for msg in messages:
         role = "assistant" if msg["role"] == "model" else "user"
         content = msg["parts"][0]
         # Capture the first assistant message (hardcoded greeting from frontend)
         if initial_greeting is None and role == "assistant":
-            initial_greeting = content
+            initial_greeting = str(content)
             continue
-        cleaned.append({"role": role, "content": content})
+        cleaned.append({"role": role, "content": str(content)})
 
     if not cleaned:
         # No real messages yet — just say hello
@@ -98,10 +108,10 @@ def chat_with_coach(messages: list[dict]) -> str:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": "Hello! I'm looking for fitness advice."}
             ],
-            temperature=0.7,
-            max_tokens=4096
+            temperature=0.7
         )
-        return response.choices[0].message.content
+        result = response.choices[0].message.content
+        return result if result else "I'm sorry, I couldn't generate a response. Could you try again?"
 
     # Build the message list for the API.
     # The API requires strict user/assistant alternation starting with user.
@@ -109,22 +119,29 @@ def chat_with_coach(messages: list[dict]) -> str:
     # user opener ("Hello!") before the greeting so:
     #   system → user("Hello!") → assistant(greeting) → user(actual msg) → ...
     # This way the AI sees its own greeting as a real turn and won't re-greet.
-    openai_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    openai_messages: list[dict[str, str]] = [{"role": "system", "content": SYSTEM_PROMPT}]
     if initial_greeting:
         openai_messages.append({"role": "user", "content": "Hello!"})
-        openai_messages.append({"role": "assistant", "content": initial_greeting})
+        openai_messages.append({"role": "assistant", "content": str(initial_greeting)})
+
+    # Keep only last 10 messages to avoid exceeding token limits
+    if len(cleaned) > 10:
+        start_idx = len(cleaned) - 10
+        cleaned = [cleaned[i] for i in range(start_idx, len(cleaned))]
     openai_messages.extend(cleaned)
 
     try:
         response = client.chat.completions.create(
             model=_MODEL_NAME,
             messages=openai_messages,
-            temperature=0.7,
-            max_tokens=4096
+            temperature=0.7
         )
-        return response.choices[0].message.content
+        result = response.choices[0].message.content
+        return result if result else "I'm sorry, I couldn't generate a response. Could you try again?"
     except Exception as e:
+        import traceback
         print(f"[Chat] Chat API error: {e}")
+        traceback.print_exc()
         raise ValueError(f"Chat failed: {e}")
 
 
@@ -133,6 +150,8 @@ def extract_plan_from_response(text: str) -> dict | None:
     Check if the chatbot response contains a plan JSON block.
     Returns the parsed plan dict or None.
     """
+    if not text:
+        return None
     # Look for JSON block in markdown code fence
     json_match = re.search(r'```json\s*(\{[\s\S]*?\})\s*```', text)
     if json_match:
