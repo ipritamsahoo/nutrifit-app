@@ -18,11 +18,12 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AuthProvider, { useAuth } from './contexts/AuthContext';
-import LoginPage from './components/LoginPage';
-import DoctorDashboard from './components/DoctorDashboard';
-import InsiderWorkspace from './components/InsiderWorkspace';
-import OutsiderChatbot from './components/OutsiderChatbot';
-import CameraView from './components/CameraView';
+import LoginPage from './features/auth/LoginPage';
+import DoctorDashboard from './features/doctor-dashboard/DoctorDashboard';
+import InsiderWorkspace from './features/patient-workspace/InsiderWorkspace';
+import OutsiderWorkspace from './features/outsider-workspace/OutsiderWorkspace';
+import OutsiderChatbot from './features/chatbot/OutsiderChatbot';
+import CameraView from './features/camera/CameraView';
 
 /* ── Role-based Protected Route ──────────────────────────────── */
 function PrivateRoute({ children, allowedRoles }) {
@@ -54,7 +55,7 @@ function HomeRedirect() {
     case 'insider':
       return <Navigate to="/workspace" replace />;
     case 'outsider':
-      return hasPlan ? <Navigate to="/workspace" replace /> : <Navigate to="/chat" replace />;
+      return hasPlan ? <Navigate to="/outsider-workspace" replace /> : <Navigate to="/chat" replace />;
     default:
       return <Navigate to="/login" replace />;
   }
@@ -85,10 +86,17 @@ function App() {
             </PrivateRoute>
           } />
 
-          {/* Workspace – for insiders (doctor's patients) and outsiders (after plan approval) */}
+          {/* Workspace – for insiders (doctor's patients) */}
           <Route path="/workspace" element={
-            <PrivateRoute allowedRoles={['insider', 'outsider']}>
+            <PrivateRoute allowedRoles={['insider']}>
               <InsiderWorkspace />
+            </PrivateRoute>
+          } />
+
+          {/* Outsider Workspace – after plan approval */}
+          <Route path="/outsider-workspace" element={
+            <PrivateRoute allowedRoles={['outsider']}>
+              <OutsiderWorkspace />
             </PrivateRoute>
           } />
 

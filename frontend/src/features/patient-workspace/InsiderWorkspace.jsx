@@ -7,11 +7,11 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import ExerciseImage from './ExerciseImage';
+import { db } from '../../firebase/config';
+import ExerciseImage from '../camera/ExerciseImage';
 import './InsiderWorkspace.css';
 
 export default function InsiderWorkspace() {

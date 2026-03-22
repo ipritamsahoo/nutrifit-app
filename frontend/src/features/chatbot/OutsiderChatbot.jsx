@@ -7,7 +7,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './OutsiderChatbot.css';
 
@@ -93,8 +93,8 @@ export default function OutsiderChatbot() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Approval failed');
 
-      // Navigate to workspace
-      navigate('/workspace');
+      // Navigate to outsider workspace
+      navigate('/outsider-workspace');
     } catch (err) {
       alert('Failed to approve plan: ' + err.message);
     } finally {
@@ -162,8 +162,8 @@ export default function OutsiderChatbot() {
       <div className="bg-blob blob-2" />
 
       {/* Floating Dashboard Button */}
-      <button className="floating-dashboard-btn" onClick={() => navigate('/workspace')}>
-        📊 Dashboard
+      <button className="floating-dashboard-btn" onClick={() => navigate('/outsider-workspace')}>
+        📊 Workspace
       </button>
 
       {/* Header */}
@@ -173,8 +173,8 @@ export default function OutsiderChatbot() {
           <h1>HonFit — Virtual Coach</h1>
         </div>
         <div className="chat-actions">
-          <button className="btn-dashboard" onClick={() => navigate('/workspace')}>
-            📊 Dashboard
+          <button className="btn-dashboard" onClick={() => navigate('/outsider-workspace')}>
+            📊 Workspace
           </button>
           <button className="btn-ghost" onClick={handleLogout}>Logout</button>
         </div>
