@@ -17,14 +17,15 @@ import Webcam from 'react-webcam';
 import { createPoseDetector } from './utils/poseUtils';
 import { clearCanvas, drawKeypoints, drawConnections } from './utils/drawUtils';
 import { calculateAngle, checkRepSquat, checkRepBicepCurl } from './utils/angleUtils';
+import { createLandmarkFilters, filterLandmarks, predictLandmarks } from './utils/cvKalmanFilter';
 import { useAuth } from '../../contexts/AuthContext';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import './CameraView.css';
 
 /* ── Constants ──────────────────────────────────────────────────── */
-const REQUESTED_WIDTH  = 1280;
-const REQUESTED_HEIGHT = 720;
+const REQUESTED_WIDTH  = 480;
+const REQUESTED_HEIGHT = 360;
 
 const EXERCISES = [
   { id: 'squat', name: 'Squats', icon: '🦵' },
@@ -47,18 +48,25 @@ function CameraView() {
   const repsRef         = useRef(0);
   const currentAngleRef = useRef(0);
   const sessionStartRef = useRef(null);
+  const kalmanFiltersRef  = useRef(createLandmarkFilters(33)); // Adaptive Kalman (speed-based R)
+  const hasNewDataRef     = useRef(false);   // Signals render loop that fresh data arrived
+  const framesSinceDataRef = useRef(0);      // Counts render frames since last MediaPipe update
+  const ctxRef             = useRef(null);   // Cached canvas context
 
   /* ── State ──────────────────────────────────────────────────── */
   const [poseDetected, setPoseDetected] = useState(false);
   const [cameraError, setCameraError]   = useState(false);
   const [fps, setFps]                   = useState(0);
   const [loading, setLoading]           = useState(true);
+
   const [videoDims, setVideoDims]       = useState({ width: REQUESTED_WIDTH, height: REQUESTED_HEIGHT });
   const [exerciseType, setExerciseType] = useState('squat');
   const [repsDisplay, setRepsDisplay]   = useState(0);
   const [saving, setSaving]             = useState(false);
 
   const firstResultRef = useRef(false);
+
+
 
   /* ── MediaPipe onResults callback ──────────────────────────── */
   const handleResults = useCallback((results) => {
@@ -69,7 +77,14 @@ function CameraView() {
     }
 
     const hasLandmarks = results.poseLandmarks && results.poseLandmarks.length > 0;
-    landmarksRef.current = hasLandmarks ? results.poseLandmarks : null;
+
+    if (hasLandmarks) {
+      // Kalman correct step (uses measurement)
+      landmarksRef.current = filterLandmarks(kalmanFiltersRef.current, results.poseLandmarks);
+      hasNewDataRef.current = true;
+    } else {
+      landmarksRef.current = null;
+    }
 
     setPoseDetected((prev) => {
       if (prev !== hasLandmarks) return hasLandmarks;
@@ -108,39 +123,75 @@ function CameraView() {
     setRepsDisplay(0);
   }
 
-  /* ── Detection + draw loop ─────────────────────────────────── */
+  /* ── Detection loop (async, independent of rendering) ──────── */
+  useEffect(() => {
+    let running = true;
+    let sending = false;  // prevent overlapping sends
+
+    async function detectionLoop() {
+      while (running) {
+        const video = webcamRef.current?.video;
+        if (video && poseRef.current && !sending) {
+          sending = true;
+          try {
+            await poseRef.current.sendFrame(video);
+          } catch (_) {
+            // Silently handle frame-send errors
+          }
+          sending = false;
+        }
+        // Yield to browser — run as fast as MediaPipe can handle
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    }
+
+    detectionLoop();
+    return () => { running = false; };
+  }, []);
+
+  /* ── Render loop (full 60fps, never blocked by detection) ──── */
   useEffect(() => {
     let running = true;
 
-    async function loop() {
+    function renderLoop() {
       if (!running) return;
 
-      const video = webcamRef.current?.video;
       const canvas = canvasRef.current;
+      const video = webcamRef.current?.video;
 
-      if (video && canvas && poseRef.current) {
-        const ctx = canvas.getContext('2d');
+      if (canvas && video) {
+        // Cache canvas context (avoid getContext every frame)
+        if (!ctxRef.current) ctxRef.current = canvas.getContext('2d', { willReadFrequently: false });
+        const ctx = ctxRef.current;
         const vw = video.videoWidth;
         const vh = video.videoHeight;
         if (vw && vh && (canvas.width !== vw || canvas.height !== vh)) {
           canvas.width  = vw;
           canvas.height = vh;
+          ctxRef.current = canvas.getContext('2d', { willReadFrequently: false });
           setVideoDims({ width: vw, height: vh });
-        }
-
-        try {
-          await poseRef.current.sendFrame(video);
-        } catch (err) {
-          // Silently handle frame-send errors
         }
 
         clearCanvas(ctx, canvas.width, canvas.height);
 
         if (landmarksRef.current) {
-          drawConnections(ctx, landmarksRef.current, canvas.width, canvas.height);
-          drawKeypoints(ctx, landmarksRef.current, canvas.width, canvas.height);
+          let drawLandmarks;
+          if (hasNewDataRef.current) {
+            // Fresh data from MediaPipe — use it directly
+            drawLandmarks = landmarksRef.current;
+            hasNewDataRef.current = false;
+            framesSinceDataRef.current = 0;
+          } else {
+            // No new data — predict ahead proportional to frames waited
+            framesSinceDataRef.current += 1;
+            const steps = Math.min(framesSinceDataRef.current, 4); // cap at 4 steps
+            drawLandmarks = predictLandmarks(kalmanFiltersRef.current, landmarksRef.current, steps);
+          }
 
-          const landmarks = landmarksRef.current;
+          drawConnections(ctx, drawLandmarks, canvas.width, canvas.height);
+          drawKeypoints(ctx, drawLandmarks, canvas.width, canvas.height);
+
+          const landmarks = drawLandmarks;
           let p1, p2, p3;
           if (exerciseType === 'squat') {
             p1 = landmarks[23]; p2 = landmarks[25]; p3 = landmarks[27];
@@ -183,10 +234,10 @@ function CameraView() {
         if (Math.random() < 0.15) setFps(fpsRef.current);
       }
 
-      rafIdRef.current = requestAnimationFrame(loop);
+      rafIdRef.current = requestAnimationFrame(renderLoop);
     }
 
-    rafIdRef.current = requestAnimationFrame(loop);
+    rafIdRef.current = requestAnimationFrame(renderLoop);
     return () => {
       running = false;
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
