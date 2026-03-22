@@ -26,12 +26,12 @@ Handles the Doctor interface to assign prescriptions and view user logs.
 - **Frontend:** `frontend/src/features/doctor-dashboard/`
 - **Backend:** `backend/routers/doctor_dashboard.py`
 
-### 3. Chatbot Module
+### 5. Chatbot Module
 Handles the AI-powered conversation interface for outsiders (users who haven't logged in yet).
 - **Frontend:** `frontend/src/features/chatbot/`
 - **Backend:** `backend/routers/chatbot.py`
 
-### 4. Camera & Motion Tracking Module
+### 6. Camera & Motion Tracking Module
 Handles the real-time pose tracking via webcam, exercise analytics, and fetching exercise GIFs from external APIs.
 - **Frontend:** `frontend/src/features/camera/`
 - **Backend:** `backend/routers/motion_tracking.py`

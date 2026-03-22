@@ -14,9 +14,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Webcam from 'react-webcam';
-import { createPoseDetector } from '../../utils/poseUtils';
-import { clearCanvas, drawKeypoints, drawConnections } from '../../utils/drawUtils';
-import { calculateAngle, checkRepSquat, checkRepBicepCurl } from '../../utils/angleUtils';
+import { createPoseDetector } from './utils/poseUtils';
+import { clearCanvas, drawKeypoints, drawConnections } from './utils/drawUtils';
+import { calculateAngle, checkRepSquat, checkRepBicepCurl } from './utils/angleUtils';
 import { useAuth } from '../../contexts/AuthContext';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
