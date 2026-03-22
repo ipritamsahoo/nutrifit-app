@@ -59,11 +59,11 @@ export function createPoseDetector(onResults) {
   });
 
   pose.setOptions({
-    modelComplexity: 2, // 2 is heavier but much more accurate for full-body
+    modelComplexity: 0, // 0 = lite (fastest, best for real-time tracking)
     smoothLandmarks: true,
     enableSegmentation: false,
-    minDetectionConfidence: 0.6,
-    minTrackingConfidence: 0.6,
+    minDetectionConfidence: 0.5,  // Lower = detects from side view better
+    minTrackingConfidence: 0.5,   // Lower = maintains tracking during occlusion
   });
 
   pose.onResults(onResults);

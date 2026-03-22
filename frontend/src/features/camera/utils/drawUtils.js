@@ -13,14 +13,14 @@ const COLOR_RIGHT  = '#00d4ff'; // Cyan for person's right side
 const COLOR_CENTER = '#ffffff'; // White for center/fallback
 const KEYPOINT_BORDER  = '#ffffff';
 const CONNECTION_COLOR = '#ffffff';
-const KEYPOINT_RADIUS  = 6;
-const KEYPOINT_BORDER_WIDTH = 2;
-const LINE_WIDTH       = 4;
+const KEYPOINT_RADIUS  = 4;
+const KEYPOINT_BORDER_WIDTH = 1;
+const LINE_WIDTH       = 3;
 
 /* ── Visibility threshold ───────────────────────────────────────── */
 // Landmarks below this visibility are not drawn.
 // This filters out wildly inaccurate guesses while keeping most joints.
-const MIN_VISIBILITY = 0.3;
+const MIN_VISIBILITY = 0.5;  // Higher = hides unreliable side-view landmarks
 
 /**
  * Helper to determine landmark color based on its index
@@ -58,28 +58,27 @@ export function clearCanvas(ctx, width, height) {
  * @param {number} height    – canvas height in pixels
  */
 export function drawKeypoints(ctx, landmarks, width, height) {
-  landmarks.forEach((lm, index) => {
-    // Skip low-confidence landmarks to avoid drawing at wrong positions
-    if (lm.visibility < MIN_VISIBILITY) return;
+  ctx.lineWidth = KEYPOINT_BORDER_WIDTH;
+  ctx.strokeStyle = KEYPOINT_BORDER;
+
+  for (let index = 11; index < landmarks.length; index++) {
+    const lm = landmarks[index];
+    // Skip low-confidence landmarks
+    if (lm.visibility < MIN_VISIBILITY) continue;
 
     const x = lm.x * width;
     const y = lm.y * height;
 
-    // Use opacity proportional to visibility for extra clarity
-    const alpha = Math.max(0.4, lm.visibility);
-
-    ctx.fillStyle   = getLandmarkColor(index);
-    ctx.strokeStyle = KEYPOINT_BORDER;
-    ctx.lineWidth   = KEYPOINT_BORDER_WIDTH;
-    ctx.globalAlpha = alpha;
+    ctx.globalAlpha = Math.max(0.5, lm.visibility);
+    ctx.fillStyle = getLandmarkColor(index);
 
     ctx.beginPath();
     ctx.arc(x, y, KEYPOINT_RADIUS, 0, 2 * Math.PI);
     ctx.fill();
     ctx.stroke();
-  });
+  }
 
-  ctx.globalAlpha = 1; // reset
+  ctx.globalAlpha = 1;
 }
 
 /**
@@ -96,15 +95,14 @@ export function drawConnections(ctx, landmarks, width, height) {
   ctx.lineCap     = 'round';
 
   for (const [i, j] of POSE_CONNECTIONS) {
+    // Skip face connections (both endpoints < 11)
+    if (i < 11 && j < 11) continue;
+
     const a = landmarks[i];
     const b = landmarks[j];
-
-    // Skip connection if either endpoint is low-confidence
     if (a.visibility < MIN_VISIBILITY || b.visibility < MIN_VISIBILITY) continue;
 
-    // Use the lower visibility of the two endpoints for line opacity
-    const alpha = Math.max(0.3, Math.min(a.visibility, b.visibility));
-    ctx.globalAlpha = alpha;
+    ctx.globalAlpha = Math.max(0.4, Math.min(a.visibility, b.visibility));
 
     ctx.beginPath();
     ctx.moveTo(a.x * width, a.y * height);
@@ -112,5 +110,5 @@ export function drawConnections(ctx, landmarks, width, height) {
     ctx.stroke();
   }
 
-  ctx.globalAlpha = 1; // reset
+  ctx.globalAlpha = 1;
 }
