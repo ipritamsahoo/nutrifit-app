@@ -9,9 +9,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import ExerciseImage from '../camera/ExerciseImage';
+import { muscleWikiCache, prefetchMuscleWikiVideo } from '../workout-media/exerciseCache';
+import VideoModal from '../workout-media/VideoModal';
+import MuscleMap from '../workout-media/MuscleMap';
 import './InsiderWorkspace.css';
 
 export default function InsiderWorkspace() {
@@ -21,6 +23,10 @@ export default function InsiderWorkspace() {
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [todayKey, setTodayKey] = useState('day_1');
+  
+  // Video Modal State
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [videoLoading, setVideoLoading] = useState(false);
 
   // Calculate today's day key (day_1 to day_7 cycling)
   useEffect(() => {
@@ -58,9 +64,90 @@ export default function InsiderWorkspace() {
     }
   }
 
+  // SEQUENTIAL PREFETCH logic: Load media for all 7 days
+  useEffect(() => {
+    if (!plan || !plan.workout_json) return;
+    
+    async function runSequentalPrefetch() {
+      const currentDay = parseInt(todayKey.replace('day_', ''), 10) || 1;
+      // Prioritize Today's MuscleWiki Data (for both HQ Video and Predictive Images)
+      const todayWorkout = plan.workout_json[todayKey];
+      if (todayWorkout && todayWorkout.exercises) {
+        for (const ex of todayWorkout.exercises) {
+          await prefetchMuscleWikiVideo(ex.name);
+        }
+      }
+
+      // Sequential Prefetch for all other days
+      const days = [1, 2, 3, 4, 5, 6, 7];
+      // Reorder days starting from tomorrow
+      const reorderedDays = [];
+      for (let i = 1; i <= 6; i++) {
+        let d = currentDay + i;
+        if (d > 7) d -= 7;
+        reorderedDays.push(d);
+      }
+
+      for (const d of reorderedDays) {
+        const dayKey = `day_${d}`;
+        const workout = plan.workout_json[dayKey];
+        if (workout && workout.exercises) {
+          for (const ex of workout.exercises) {
+            // Load videos
+            await prefetchMuscleWikiVideo(ex.name);
+          }
+        }
+        // Small delay between days to save bandwidth
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    runSequentalPrefetch();
+  }, [plan]);
+
   function handleLogout() {
     logout();
     navigate('/login');
+  }
+
+  async function handleExerciseClick(exName) {
+    if (muscleWikiCache[exName]) {
+      const data = muscleWikiCache[exName];
+      setSelectedVideo({
+        name: data.exercise_name,
+        videos: data.videos,
+        muscle_group: data.muscle_group,
+        difficulty: data.difficulty
+      });
+      setVideoLoading(false); // Reset just in case
+      return;
+    }
+
+    setSelectedVideo({ name: exName, videos: null, muscle_group: null, difficulty: null });
+    setVideoLoading(true);
+    try {
+      const res = await fetch(`/musclewiki-video?name=${encodeURIComponent(exName)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.found && data.videos) {
+          muscleWikiCache[exName] = data; // Cache it
+          setSelectedVideo({
+            name: data.exercise_name,
+            videos: data.videos,
+            muscle_group: data.muscle_group,
+            difficulty: data.difficulty
+          });
+          return;
+        }
+      }
+      setSelectedVideo(null);
+      alert(`No MuscleWiki video demonstration found for "${exName}".`);
+    } catch (err) {
+      console.error('Error fetching video:', err);
+      setSelectedVideo(null);
+    } finally {
+      setVideoLoading(false);
+    }
   }
 
   // Get today's data from plan
@@ -116,7 +203,7 @@ export default function InsiderWorkspace() {
           <>
             {/* Day Selector */}
             <div className="day-selector">
-              {[1,2,3,4,5,6,7].map(d => (
+              {[1, 2, 3, 4, 5, 6, 7].map(d => (
                 <button
                   key={d}
                   className={`day-btn ${todayKey === `day_${d}` ? 'active' : ''}`}
@@ -171,9 +258,14 @@ export default function InsiderWorkspace() {
                   {todayWorkout && typeof todayWorkout === 'object' ? (
                     <>
                       {todayWorkout.exercises?.map((ex, i) => (
-                        <div className="exercise-item" key={i} style={{ display: 'flex', alignItems: 'center' }}>
-                          <div className="ex-img-container">
-                            <ExerciseImage name={ex.name} />
+                        <div 
+                          className="exercise-item" 
+                          key={i} 
+                          onClick={() => handleExerciseClick(ex.name)}
+                          title="Click to view MuscleWiki exercise video"
+                        >
+                          <div className="ex-muscle-preview">
+                            <MuscleMap muscleName={ex.target_muscle} size={42} />
                           </div>
                           <div className="ex-item-content">
                             <div className="ex-name">{ex.name}</div>
@@ -181,6 +273,7 @@ export default function InsiderWorkspace() {
                               {ex.sets}×{ex.reps} • {ex.target_muscle}
                             </div>
                           </div>
+                          <div className="ex-play-btn">▶</div>
                         </div>
                       ))}
                       {todayWorkout.duration_minutes && (
@@ -218,13 +311,25 @@ export default function InsiderWorkspace() {
 
       {/* Floating Chatbot Button */}
       {userRole === 'outsider' && (
-        <button 
-          className="fab-chat" 
+        <button
+          className="fab-chat"
           onClick={() => navigate('/chat')}
           title="Ask Virtual Coach"
         >
           💬 AI Coach
         </button>
+      )}
+
+      {/* Video Modal */}
+      {selectedVideo && (
+        <VideoModal 
+          exerciseName={selectedVideo.name}
+          videos={selectedVideo.videos}
+          muscleGroup={selectedVideo.muscle_group}
+          difficulty={selectedVideo.difficulty}
+          isLoading={videoLoading}
+          onClose={() => setSelectedVideo(null)}
+        />
       )}
     </div>
   );
