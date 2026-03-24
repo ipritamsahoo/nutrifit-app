@@ -19,6 +19,9 @@ export const POSE_CONNECTIONS = [
   [0, 4], [4, 5], [5, 6], [6, 8],
   [9, 10],
 
+  // Neck (connects head to body)
+  [0, 11], [0, 12],
+
   // Torso
   [11, 12],
   [11, 23], [12, 24],
@@ -62,8 +65,8 @@ export function createPoseDetector(onResults) {
     modelComplexity: 0, // 0 = lite (fastest, best for real-time tracking)
     smoothLandmarks: true,
     enableSegmentation: false,
-    minDetectionConfidence: 0.5,  // Lower = detects from side view better
-    minTrackingConfidence: 0.5,   // Lower = maintains tracking during occlusion
+    minDetectionConfidence: 0.4,  // Lower = detects from side view better
+    minTrackingConfidence: 0.4,   // Lower = maintains tracking during side-view occlusion
   });
 
   pose.onResults(onResults);
