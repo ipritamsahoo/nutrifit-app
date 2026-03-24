@@ -31,7 +31,11 @@ client = OpenAI(
   }
 )
 
-SYSTEM_PROMPT = """You are HonFit Virtual Coach — a friendly, professional AI fitness and nutrition coach.
+from exercise_utils import get_exercises_prompt_string, sanitize_plan_workouts
+
+def get_system_prompt() -> str:
+    valid_exercises = get_exercises_prompt_string()
+    return f"""You are HonFit Virtual Coach — a friendly, professional AI fitness and nutrition coach.
 
 Your job is to have a natural conversation with the user to understand their fitness goals and create a personalized plan.
 
@@ -55,25 +59,24 @@ Your job is to have a natural conversation with the user to understand their fit
 - When you have enough information to create a complete plan, include the plan in your response using this EXACT format:
 
 ```json
-{PLAN_JSON_HERE}
-```
-
-The JSON must follow this structure:
-{
-  "diet_plan": {
-    "day_1": { "breakfast": {"meal": "...", "calories": 000}, "lunch": {...}, "dinner": {...}, "snacks": {...} },
+{{
+  "diet_plan": {{
+    "day_1": {{ "breakfast": {{"meal": "...", "calories": 000}}, "lunch": {{...}}, "dinner": {{...}}, "snacks": {{...}} }},
     ... (day_1 through day_7)
-  },
-  "workout_plan": {
-    "day_1": { "exercises": [{"name": "Squats", "sets": 3, "reps": 12, "target_muscle": "Quadriceps"}], "duration_minutes": 45 },
+  }},
+  "workout_plan": {{
+    "day_1": {{ "exercises": [{{"name": "Bodyweight Squat", "sets": 3, "reps": 12, "target_muscle": "Quadriceps"}}], "duration_minutes": 45 }},
     ... (day_1 through day_7)
-  },
+  }},
   "daily_calories_target": 2000,
   "daily_water_liters": 2.5,
   "notes": "Important advice"
-}
+}}
+```
 
-Exercise names must use standard names: Squats, Bicep Curls, Bench Press, Deadlift, Lunges, Plank, Push-ups, Pull-ups, Shoulder Press, Lat Pulldown, etc.
+CRITICAL INSTRUCTIONS FOR EXERCISES:
+You MUST ONLY select exercise names EXACTLY from this verified MuscleWiki list: {valid_exercises}. NEVER invent new exercise names or use names not on this list.
+Before returning the JSON, double-check that every workout `name` appears in this verified list exactly.
 
 CRITICAL INSTRUCTIONS FOR JSON GENERATION:
 1. You MUST include BOTH the `"diet_plan"` AND the `"workout_plan"` in the JSON. Never omit the workout_plan.
@@ -105,12 +108,12 @@ def chat_with_coach(messages: list[dict]) -> str:
         response = client.chat.completions.create(
             model=_MODEL_NAME,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": get_system_prompt()},
                 {"role": "user", "content": "Hello! I'm looking for fitness advice."}
             ],
             temperature=0.7
         )
-        result = response.choices[0].message.content
+        result = response.choices[0].message.content or ""
         return result if result else "I'm sorry, I couldn't generate a response. Could you try again?"
 
     # Build the message list for the API.
@@ -119,7 +122,7 @@ def chat_with_coach(messages: list[dict]) -> str:
     # user opener ("Hello!") before the greeting so:
     #   system → user("Hello!") → assistant(greeting) → user(actual msg) → ...
     # This way the AI sees its own greeting as a real turn and won't re-greet.
-    openai_messages: list[dict[str, str]] = [{"role": "system", "content": SYSTEM_PROMPT}]
+    openai_messages = [{"role": "system", "content": get_system_prompt()}]
     if initial_greeting:
         openai_messages.append({"role": "user", "content": "Hello!"})
         openai_messages.append({"role": "assistant", "content": str(initial_greeting)})
@@ -136,7 +139,7 @@ def chat_with_coach(messages: list[dict]) -> str:
             messages=openai_messages,
             temperature=0.7
         )
-        result = response.choices[0].message.content
+        result = response.choices[0].message.content or ""
         return result if result else "I'm sorry, I couldn't generate a response. Could you try again?"
     except Exception as e:
         import traceback
@@ -159,7 +162,7 @@ def extract_plan_from_response(text: str) -> dict | None:
             plan = json.loads(json_match.group(1))
             # Verify it has the expected keys
             if "diet_plan" in plan and "workout_plan" in plan:
-                return plan
+                return sanitize_plan_workouts(plan)
         except json.JSONDecodeError:
             pass
     
@@ -169,7 +172,7 @@ def extract_plan_from_response(text: str) -> dict | None:
         try:
             plan = json.loads(json_match.group(1))
             if "diet_plan" in plan and "workout_plan" in plan:
-                return plan
+                return sanitize_plan_workouts(plan)
         except json.JSONDecodeError:
             pass
 
