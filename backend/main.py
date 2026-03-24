@@ -18,16 +18,9 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# ── CORS – allow the React dev server ────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",   # Vite dev server
-        "https://localhost:5173",  # HTTPS Vite dev server
-        "http://localhost:3000",   # Fallback
-        "http://127.0.0.1:5173",
-        "https://127.0.0.1:5173",
-    ],
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "https://localhost:5173", "https://localhost:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
