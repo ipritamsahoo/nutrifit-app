@@ -105,10 +105,10 @@ export class LandmarkKalmanFilter {
    * Low visibility → trusts prediction more (high R) → prevents flicker
    */
   update(rawX, rawY, visibility = 1) {
-    // Smooth the visibility value itself (EMA, alpha=0.3)
-    // This prevents rapid show/hide flickering from side views
+    // Smooth the visibility value itself (EMA, alpha=0.15)
+    // Stronger smoothing prevents skeleton from breaking during side views
     this.smoothedVisibility =
-      this.smoothedVisibility * 0.7 + visibility * 0.3;
+      this.smoothedVisibility * 0.85 + visibility * 0.15;
 
     if (!this.initialised) {
       this.x = [rawX, rawY, 0, 0];
@@ -183,7 +183,7 @@ export class LandmarkKalmanFilter {
     return M.map((row) => row.reduce((sum, val, j) => sum + val * v[j], 0));
   }
 
-  dispose() {}
+  dispose() { }
 }
 
 /* ─── Factory helpers ─────────────────────────────────────────── */
@@ -192,7 +192,7 @@ export function createLandmarkFilters(
   count = 33,
   processNoise = 5e-2,
   measureNoiseMin = 1e-3,
-  measureNoiseMax = 8e-2,
+  measureNoiseMax = 0.10,
   speedThreshold = 0.02,
 ) {
   return Array.from({ length: count }, () =>
@@ -222,6 +222,32 @@ export function predictLandmarks(filters, lastLandmarks, steps = 1) {
       y: result.y,
       z: lm.z ?? 0,
       visibility: result.smoothedVisibility,
+    };
+  });
+}
+
+/**
+ * lerpLandmarks
+ * -------------
+ * Linearly interpolate between two landmark arrays.
+ * Used to create butter-smooth transitions between frames.
+ *
+ * @param {Array} from  – previous landmarks
+ * @param {Array} to    – new/target landmarks
+ * @param {number} t    – interpolation factor (0 = from, 1 = to)
+ * @returns {Array} interpolated landmarks
+ */
+export function lerpLandmarks(from, to, t) {
+  if (!from || !to) return to || from;
+  const clampedT = Math.max(0, Math.min(1, t));
+  return to.map((lm, i) => {
+    const prev = from[i];
+    if (!prev) return lm;
+    return {
+      x: prev.x + (lm.x - prev.x) * clampedT,
+      y: prev.y + (lm.y - prev.y) * clampedT,
+      z: (prev.z ?? 0) + ((lm.z ?? 0) - (prev.z ?? 0)) * clampedT,
+      visibility: prev.visibility + (lm.visibility - prev.visibility) * clampedT,
     };
   });
 }

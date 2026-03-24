@@ -3,6 +3,11 @@
  * =============
  * Utility functions for calculating joint angles and tracking reps
  * for specific exercises (e.g. Squats, Bicep Curls).
+ *
+ * Enhanced with:
+ *  - Real-time feedback messages
+ *  - Rep progress (0-100%)
+ *  - Form correctness flag
  */
 
 /**
@@ -17,11 +22,9 @@
 export function calculateAngle(p1, p2, p3) {
   if (!p1 || !p2 || !p3) return 0;
 
-  // Calculate angle using Math.atan2
   const radians = Math.atan2(p3.y - p2.y, p3.x - p2.x) - Math.atan2(p1.y - p2.y, p1.x - p2.x);
   let angle = Math.abs((radians * 180.0) / Math.PI);
 
-  // Normalize angle to be =< 180
   if (angle > 180.0) {
     angle = 360 - angle;
   }
@@ -29,58 +32,99 @@ export function calculateAngle(p1, p2, p3) {
   return angle;
 }
 
+/* ── Squat thresholds ──────────────────────────────────────────── */
+const SQUAT_DOWN_THRESHOLD = 100;  // Below this = full depth
+const SQUAT_UP_THRESHOLD   = 160;  // Above this = standing
+const SQUAT_START_ANGLE    = 170;  // Starting/standing angle
+
 /**
- * Checks Rep logic for a Squat.
- * Target angle: Hip(23/24) - Knee(25/26) - Ankle(27/28)
- * 
+ * Checks Rep logic for a Squat with enhanced feedback.
+ *
  * @param {number} angle - The calculated knee angle
  * @param {string} currentState - 'up' or 'down'
- * @returns {Object} { newState: string, repCompleted: boolean }
+ * @returns {Object} { newState, repCompleted, feedback, progress, isCorrect }
  */
 export function checkRepSquat(angle, currentState) {
   let newState = currentState;
   let repCompleted = false;
+  let feedback = '';
+  let isCorrect = false;
 
-  // Squat logic boundaries
-  const SQUAT_DOWN_THRESHOLD = 100;
-  const SQUAT_UP_THRESHOLD = 160;
+  // Progress: how far into the squat (0 = standing, 100 = full depth)
+  const progress = Math.max(0, Math.min(100,
+    ((SQUAT_START_ANGLE - angle) / (SQUAT_START_ANGLE - SQUAT_DOWN_THRESHOLD)) * 100
+  ));
 
   if (angle > SQUAT_UP_THRESHOLD) {
     if (currentState === 'down') {
-      repCompleted = true; // Completed a full rep!
+      repCompleted = true;
+      feedback = '✅ Rep Complete!';
+    } else {
+      feedback = 'Ready! Go down slowly.';
     }
     newState = 'up';
   } else if (angle < SQUAT_DOWN_THRESHOLD) {
+    feedback = '🔥 Perfect depth! Push up!';
+    isCorrect = true;
     newState = 'down';
+  } else if (angle >= SQUAT_DOWN_THRESHOLD && angle <= 130) {
+    feedback = 'Almost there, go deeper!';
+    newState = 'down';
+  } else if (angle > 130 && angle <= SQUAT_UP_THRESHOLD) {
+    if (currentState === 'up') {
+      feedback = 'Going down... keep going!';
+    } else {
+      feedback = 'Pushing up... good!';
+    }
   }
 
-  return { newState, repCompleted };
+  return { newState, repCompleted, feedback, progress, isCorrect };
 }
 
+/* ── Bicep Curl thresholds ─────────────────────────────────────── */
+const CURL_UP_THRESHOLD    = 35;   // Below this = fully curled
+const CURL_DOWN_THRESHOLD  = 160;  // Above this = arm straight
+const CURL_START_ANGLE     = 170;  // Starting/straight angle
+
 /**
- * Checks Rep logic for a Bicep Curl.
- * Target angle: Shoulder(11/12) - Elbow(13/14) - Wrist(15/16)
+ * Checks Rep logic for a Bicep Curl with enhanced feedback.
  *
  * @param {number} angle - The calculated elbow angle
  * @param {string} currentState - 'up' or 'down'
- * @returns {Object} { newState: string, repCompleted: boolean }
+ * @returns {Object} { newState, repCompleted, feedback, progress, isCorrect }
  */
 export function checkRepBicepCurl(angle, currentState) {
   let newState = currentState;
   let repCompleted = false;
+  let feedback = '';
+  let isCorrect = false;
 
-  // Curl logic boundaries
-  const CURL_UP_THRESHOLD = 30;   // Arm fully curled
-  const CURL_DOWN_THRESHOLD = 160; // Arm fully relaxed/down
+  // Progress: how far into the curl (0 = straight, 100 = fully curled)
+  const progress = Math.max(0, Math.min(100,
+    ((CURL_START_ANGLE - angle) / (CURL_START_ANGLE - CURL_UP_THRESHOLD)) * 100
+  ));
 
   if (angle > CURL_DOWN_THRESHOLD) {
+    feedback = 'Full stretch! Now curl up.';
     newState = 'down';
   } else if (angle < CURL_UP_THRESHOLD) {
     if (currentState === 'down') {
-      repCompleted = true; // Completed a curl!
+      repCompleted = true;
+      feedback = '✅ Rep Complete!';
+    } else {
+      feedback = '🔥 Great squeeze!';
     }
+    isCorrect = true;
     newState = 'up';
+  } else if (angle >= CURL_UP_THRESHOLD && angle <= 70) {
+    feedback = 'Almost there, squeeze harder!';
+  } else if (angle > 70 && angle <= CURL_DOWN_THRESHOLD) {
+    if (currentState === 'down') {
+      feedback = 'Keep curling...';
+    } else {
+      feedback = 'Lowering... control the motion.';
+    }
   }
 
-  return { newState, repCompleted };
+  return { newState, repCompleted, feedback, progress, isCorrect };
 }
