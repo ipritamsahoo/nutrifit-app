@@ -176,6 +176,44 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
+/* ── Quick Reply Pills ──────────────────────────── */
+.quick-replies {
+  display: flex;
+  gap: 8px;
+  padding: 10px 20px;
+  flex-wrap: wrap;
+  background: rgba(10, 10, 10, 0.7);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  animation: qrSlideUp 0.3s ease-out;
+}
+@keyframes qrSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.qr-pill {
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.qr-pill:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #a5b4fc;
+  transform: translateY(-2px);
+}
+.qr-pill:active {
+  transform: scale(0.95);
+  background: #6366f1;
+  color: #fff;
+}
+
 /* ── Input Area ──────────────────────────────────── */
 .chat-input-area {
   display: flex;

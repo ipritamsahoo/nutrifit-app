@@ -321,7 +321,51 @@ def chat_with_coach(messages: list[dict], uid: str = "default_session") -> str:
             if plan_json:
                 return f"Your personalized plan is completely ready! Here it is:\n\n```json\n{plan_json}\n```"
             else:
-                return "I'm so sorry, I ran into an issue building your plan. Can we try verifying your goal again?"
+                # ── FALLBACK: Triggers were missed, generate plan synchronously ──
+                print(f"[Chat] FALLBACK: plan_json is None for {session_id}. Generating synchronously...")
+                
+                # Parse the full conversation to extract user profile
+                full_text = " ".join([m.get("content", "") for m in openai_messages if m["role"] in ("user", "assistant")])
+                
+                # Extract goal
+                goal_match = re.search(r"(?:goal|objective)[:\s]*(build.?muscle|lose.?weight|stay.?fit|flexibility)", full_text, re.I)
+                fallback_goal = goal_match.group(1).strip().upper().replace(" ", "_") if goal_match else "STAY_FIT"
+                # Normalize common variations
+                if "BUILD" in fallback_goal and "MUSCLE" in fallback_goal: fallback_goal = "BUILD_MUSCLE"
+                elif "LOSE" in fallback_goal and "WEIGHT" in fallback_goal: fallback_goal = "LOSE_WEIGHT"
+                elif "STAY" in fallback_goal and "FIT" in fallback_goal: fallback_goal = "STAY_FIT"
+                
+                # Extract equipment
+                equip_match = re.search(r"(?:equipment|gym)[:\s]*(no.?equipment|with.?equipment|yes|no)", full_text, re.I)
+                if equip_match:
+                    eq_raw = equip_match.group(1).strip().lower()
+                    fallback_equip = "NO_EQUIPMENT" if "no" in eq_raw else "WITH_EQUIPMENT"
+                else:
+                    fallback_equip = "NO_EQUIPMENT"
+                
+                # Extract targets
+                target_match = re.search(r"(?:focus|target|body.?part|areas?)[:\s]*([^\n.?!]+)", full_text, re.I)
+                fallback_targets = [t.strip() for t in target_match.group(1).split(",") if t.strip()] if target_match else ["Full Body"]
+                
+                print(f"[Chat] FALLBACK parsed => Goal={fallback_goal}, Equip={fallback_equip}, Targets={fallback_targets}")
+                
+                # Run filtering
+                valid_exercises = _get_filtered_exercises(fallback_goal, fallback_equip, fallback_targets)
+                if not valid_exercises:
+                    valid_exercises = "Pushups, Squats, Lunges, Planks, Crunches, Jumping Jacks, Burpees, Mountain Climbers"
+                
+                # Build a summary from conversation
+                user_msgs = [m.get("content", "") for m in openai_messages if m["role"] == "user"]
+                summary = f"Goal: {fallback_goal}, Equipment: {fallback_equip}, Targets: {', '.join(fallback_targets)}. User said: {'; '.join(user_msgs[-5:])}"
+                
+                # Generate plan synchronously
+                plan_result = _generate_plan(summary, valid_exercises)
+                if plan_result:
+                    _session_store[session_id]["plan_json"] = plan_result
+                    _session_store[session_id]["plan_done"] = True
+                    return f"Your personalized plan is completely ready! Here it is:\n\n```json\n{plan_result}\n```"
+                else:
+                    return "I'm having trouble generating your plan right now. Let me try once more — could you tell me your fitness goal again? (e.g., Build Muscle, Lose Weight, Stay Fit)"
             
         return ai_response
     except Exception as e:
