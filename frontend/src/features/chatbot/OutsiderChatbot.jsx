@@ -21,7 +21,7 @@ export default function OutsiderChatbot() {
   const [messages, setMessages] = useState([
     {
       role: 'model',
-      text: `Hey ${userData?.name || 'there'}! 👋 I'm your HonFit Virtual Coach. I'm here to create a personalized fitness and diet plan just for you!\n\nLet's start — what's your main fitness goal? Are you looking to lose weight, build muscle, stay fit, or improve flexibility?`,
+      text: `Hey ${userData?.name || 'there'}! 👋 I'm your HonFit Virtual Coach. I'm here to create a personalized fitness and diet plan just for you! Let's get started.`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -37,6 +37,44 @@ export default function OutsiderChatbot() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // On mount, trigger the AI's first question
+  useEffect(() => {
+    const isInitialMount = messages.length === 1;
+
+    async function startConversation() {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: currentUser.uid,
+            messages: messages.map(m => ({ role: m.role, text: m.text })),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Initial chat failed');
+        const assistantMsg = { role: 'model', text: data.response };
+        setMessages(prev => [...prev, assistantMsg]);
+      } catch (err) {
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'model',
+            text: `⚠️ Sorry, something went wrong: ${err.message}. Please try again.`,
+          },
+        ]);
+      } finally {
+        setLoading(false);
+        setTimeout(() => inputRef.current?.focus(), 0);
+      }
+    }
+
+    if (isInitialMount && currentUser?.uid) {
+      startConversation();
+    }
+  }, [currentUser]); // Depends on currentUser to ensure UID is available
 
   // ── Send message ──────────────────────────────────
   async function handleSend(e) {
@@ -93,8 +131,8 @@ export default function OutsiderChatbot() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Approval failed');
 
-      // Navigate to outsider workspace
-      navigate('/outsider-workspace');
+      // Navigate to unified workspace
+      navigate('/workspace');
     } catch (err) {
       alert('Failed to approve plan: ' + err.message);
     } finally {
@@ -161,10 +199,6 @@ export default function OutsiderChatbot() {
       <div className="bg-blob blob-1" />
       <div className="bg-blob blob-2" />
 
-      {/* Floating Dashboard Button */}
-      <button className="floating-dashboard-btn" onClick={() => navigate('/outsider-workspace')}>
-        📊 Workspace
-      </button>
 
       {/* Header */}
       <header className="chat-header">
@@ -173,7 +207,7 @@ export default function OutsiderChatbot() {
           <h1>HonFit — Virtual Coach</h1>
         </div>
         <div className="chat-actions">
-          <button className="btn-dashboard" onClick={() => navigate('/outsider-workspace')}>
+          <button className="btn-dashboard" onClick={() => navigate('/workspace')}>
             📊 Workspace
           </button>
           <button className="btn-ghost" onClick={handleLogout}>Logout</button>

@@ -20,8 +20,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AuthProvider, { useAuth } from './contexts/AuthContext';
 import LoginPage from './features/auth/LoginPage';
 import DoctorDashboard from './features/doctor-dashboard/DoctorDashboard';
-import InsiderWorkspace from './features/patient-workspace/InsiderWorkspace';
-import OutsiderWorkspace from './features/outsider-workspace/OutsiderWorkspace';
+import UserWorkspace from './features/patient-workspace/UserWorkspace';
 import OutsiderChatbot from './features/chatbot/OutsiderChatbot';
 import CameraView from './features/camera/CameraView';
 
@@ -55,7 +54,7 @@ function HomeRedirect() {
     case 'insider':
       return <Navigate to="/workspace" replace />;
     case 'outsider':
-      return hasPlan ? <Navigate to="/outsider-workspace" replace /> : <Navigate to="/chat" replace />;
+      return hasPlan ? <Navigate to="/workspace" replace /> : <Navigate to="/chat" replace />;
     default:
       return <Navigate to="/login" replace />;
   }
@@ -86,17 +85,10 @@ function App() {
             </PrivateRoute>
           } />
 
-          {/* Workspace – for insiders (doctor's patients) */}
+          {/* Unified Workspace – for both insiders (doctor's patients) and outsiders (self users) */}
           <Route path="/workspace" element={
-            <PrivateRoute allowedRoles={['insider']}>
-              <InsiderWorkspace />
-            </PrivateRoute>
-          } />
-
-          {/* Outsider Workspace – after plan approval */}
-          <Route path="/outsider-workspace" element={
-            <PrivateRoute allowedRoles={['outsider']}>
-              <OutsiderWorkspace />
+            <PrivateRoute allowedRoles={['insider', 'outsider']}>
+              <UserWorkspace />
             </PrivateRoute>
           } />
 

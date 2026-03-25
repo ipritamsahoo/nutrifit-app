@@ -13,11 +13,12 @@
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import { createPoseDetector } from './utils/poseUtils';
 import { clearCanvas, drawKeypoints, drawConnections } from './utils/drawUtils';
-import { calculateAngle, checkRepSquat, checkRepBicepCurl } from './utils/angleUtils';
+import { calculateAngle, checkGenericRep } from './utils/angleUtils';
+import { EXERCISE_MAPPINGS, getExerciseConfig } from './utils/exerciseConfigs';
 import { createLandmarkFilters, filterLandmarks, predictLandmarks, lerpLandmarks } from './utils/cvKalmanFilter';
 import { speak, stopSpeaking } from './utils/speechUtils';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,13 +31,19 @@ const REQUESTED_WIDTH = 480;
 const REQUESTED_HEIGHT = 360;
 const LERP_SPEED = 0.40;  // Balance: smooth but responsive to body movement
 
-const EXERCISES = [
-  { id: 'squat', name: 'Squats', icon: '🦵' },
-  { id: 'bicepCurl', name: 'Bicep Curls', icon: '💪' },
-];
+const EXERCISES = Object.keys(EXERCISE_MAPPINGS).map(name => {
+  const cfg = getExerciseConfig(name);
+  let icon = '🏋️';
+  if (cfg.category === 'lower_body') icon = '🦵';
+  else if (cfg.category === 'upper_body') icon = '💪';
+  else if (cfg.category === 'core') icon = '🔥';
+  
+  return { id: name, name: name, icon };
+}).sort((a,b) => a.name.localeCompare(b.name));
 
 function CameraView() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
 
   /* ── Refs (no re-renders) ───────────────────────────────────── */
@@ -69,7 +76,11 @@ function CameraView() {
   const [loading, setLoading] = useState(true);
 
   const [videoDims, setVideoDims] = useState({ width: REQUESTED_WIDTH, height: REQUESTED_HEIGHT });
-  const [exerciseType, setExerciseType] = useState('squat');
+  const [exerciseType, setExerciseType] = useState(() => {
+    const urlEx = searchParams.get('exercise');
+    if (urlEx && EXERCISES.some(e => e.id === urlEx)) return urlEx;
+    return EXERCISES.find(e => e.name === 'Barbell Forward Lunge')?.id || EXERCISES[0].id;
+  });
   const [repsDisplay, setRepsDisplay] = useState(0);
   const [saving, setSaving] = useState(false);
 
@@ -216,12 +227,12 @@ function CameraView() {
           let currentStatus = 'idle';
 
           const landmarks = drawLandmarks;
-          let p1, p2, p3;
-          if (exerciseType === 'squat') {
-            p1 = landmarks[23]; p2 = landmarks[25]; p3 = landmarks[27];
-          } else {
-            p1 = landmarks[11]; p2 = landmarks[13]; p3 = landmarks[15];
-          }
+          const config = getExerciseConfig(exerciseType) || getExerciseConfig('default');
+          const [j1, j2, j3] = config.joints;
+          
+          let p1 = landmarks[j1];
+          let p2 = landmarks[j2];
+          let p3 = landmarks[j3];
 
           if (p1 && p2 && p3 && p1.visibility > 0.5 && p2.visibility > 0.5 && p3.visibility > 0.5) {
             const px1 = { x: p1.x * canvas.width, y: p1.y * canvas.height };
@@ -231,12 +242,7 @@ function CameraView() {
             const angle = calculateAngle(px1, px2, px3);
             currentAngleRef.current = angle;
 
-            let res;
-            if (exerciseType === 'squat') {
-              res = checkRepSquat(angle, workoutStateRef.current);
-            } else {
-              res = checkRepBicepCurl(angle, workoutStateRef.current);
-            }
+            const res = checkGenericRep(angle, workoutStateRef.current, config);
 
             workoutStateRef.current = res.newState;
 
@@ -323,7 +329,7 @@ function CameraView() {
 
       await addDoc(collection(db, 'logs'), {
         uid: currentUser.uid,
-        exercise_name: EXERCISES.find(e => e.id === exerciseType)?.name || exerciseType,
+        exercise_name: exerciseType,
         reps_count: repsRef.current,
         accuracy: Math.max(formScore, 10), // Minimum 10% to avoid discouragement
         duration_seconds: durationSec,
@@ -377,17 +383,14 @@ function CameraView() {
         </div>
       </header>
 
-      {/* Exercise Selector + Mute Button */}
-      <div className="exercise-selector">
-        {EXERCISES.map(ex => (
-          <button
-            key={ex.id}
-            className={`ex-btn ${exerciseType === ex.id ? 'active' : ''}`}
-            onClick={() => handleExerciseChange(ex.id)}
-          >
-            {ex.icon} {ex.name}
-          </button>
-        ))}
+      {/* Exercise Badge + Mute Button */}
+      <div className="exercise-selector" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div 
+          className="active-exercise-badge"
+          style={{ padding: '8px 16px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          {EXERCISES.find(e => e.id === exerciseType)?.icon || '🏋️'} {EXERCISES.find(e => e.id === exerciseType)?.name || exerciseType}
+        </div>
         <button
           className={`ex-btn mute-btn ${isMuted ? 'muted' : ''}`}
           onClick={() => {

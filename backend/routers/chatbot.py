@@ -33,7 +33,7 @@ async def chat_endpoint(req: ChatRequest):
 
     # Get response from Gemini
     try:
-        response_text = chat_with_coach(gemini_messages)
+        response_text = chat_with_coach(gemini_messages, uid=req.uid)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat failed: {e}")
 

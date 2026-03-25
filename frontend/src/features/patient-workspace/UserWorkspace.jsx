@@ -1,12 +1,12 @@
 /**
- * OutsiderWorkspace.jsx
+ * UserWorkspace.jsx
  * =====================
- * Workspace for both Insiders (doctor's patients) and Outsiders (after plan approval).
+ * Unified Workspace for both Insiders (doctor's patients) and Outsiders (self-users).
  * Shows "Today's Tasks" — current day's diet and workout from the active plan.
  * Provides direct access to MediaPipe AI Trainer.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -14,9 +14,9 @@ import { db } from '../../firebase/config';
 import { muscleWikiCache, prefetchMuscleWikiVideo } from '../workout-media/exerciseCache';
 import VideoModal from '../workout-media/VideoModal';
 import MuscleMap from '../workout-media/MuscleMap';
-import './OutsiderWorkspace.css';
+import './UserWorkspace.css';
 
-export default function OutsiderWorkspace() {
+export default function UserWorkspace() {
   const { currentUser, userRole, userData, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -45,7 +45,7 @@ export default function OutsiderWorkspace() {
     setLoading(true);
     try {
       // For insiders: get plan assigned by doctor (plan_type = 'manual')
-      // For outsiders: get approved AI plan (status = 'approved')
+      // For outsiders: get approved AI plan (status = 'approved' or created_at newest)
       const q = query(
         collection(db, 'plans'),
         where('uid', '==', currentUser.uid)
@@ -53,7 +53,7 @@ export default function OutsiderWorkspace() {
       const snap = await getDocs(q);
       if (!snap.empty) {
         const userPlans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Sort by created_at descending in memory to avoid Firebase Index errors
+        // Sort by created_at descending in memory
         userPlans.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         setPlan(userPlans[0]);
       }
@@ -64,21 +64,26 @@ export default function OutsiderWorkspace() {
     }
   }
 
-  // SEQUENTIAL PREFETCH logic: Load media for all 7 days
+  // SEQUENTIAL PREFETCH logic: Load media for all 7 days with AbortController
   useEffect(() => {
     if (!plan || !plan.workout_json) return;
     
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+
     async function runSequentalPrefetch() {
       const currentDay = parseInt(todayKey.replace('day_', ''), 10) || 1;
-      // Prioritize Today's MuscleWiki Data (for both HQ Video and Predictive Images)
+      
+      // 1. Prioritize Today's MuscleWiki Data
       const todayWorkout = plan.workout_json[todayKey];
       if (todayWorkout && todayWorkout.exercises) {
         for (const ex of todayWorkout.exercises) {
+          if (signal.aborted) return;
           await prefetchMuscleWikiVideo(ex.name);
         }
       }
 
-      // Sequential Prefetch for all other days
+      // 2. Sequential Prefetch for all other days
       const days = [1, 2, 3, 4, 5, 6, 7];
       const reorderedDays = [];
       for (let i = 1; i <= 6; i++) {
@@ -88,18 +93,25 @@ export default function OutsiderWorkspace() {
       }
 
       for (const d of reorderedDays) {
+        if (signal.aborted) return;
         const dayKey = `day_${d}`;
         const workout = plan.workout_json[dayKey];
         if (workout && workout.exercises) {
           for (const ex of workout.exercises) {
+            if (signal.aborted) return;
             await prefetchMuscleWikiVideo(ex.name);
           }
         }
+        // Small delay between days
         await new Promise(r => setTimeout(r, 1000));
       }
     }
 
     runSequentalPrefetch();
+
+    return () => {
+      abortController.abort(); // Cancel any pending prefetch on unmount
+    };
   }, [plan]);
 
   function handleLogout() {
@@ -249,7 +261,14 @@ export default function OutsiderWorkspace() {
               <section className="task-card">
                 <div className="tc-header">
                   <span>🏋️</span>
-                  <h3>Today's Workout</h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 1 }}>
+                    <h3>Today's Workout</h3>
+                    {todayWorkout?.duration_minutes && (
+                      <span style={{ fontSize: '13px', color: '#9ca3af', opacity: 0.8 }}>
+                        ⏱ {todayWorkout.duration_minutes} min
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="tc-body">
                   {todayWorkout && typeof todayWorkout === 'object' ? (
@@ -273,11 +292,6 @@ export default function OutsiderWorkspace() {
                           <div className="ex-play-btn">▶</div>
                         </div>
                       ))}
-                      {todayWorkout.duration_minutes && (
-                        <div className="workout-duration">
-                          ⏱ {todayWorkout.duration_minutes} min
-                        </div>
-                      )}
                     </>
                   ) : todayWorkout ? (
                     <p className="plan-text">{String(todayWorkout)}</p>
@@ -285,17 +299,10 @@ export default function OutsiderWorkspace() {
                     <p className="no-data">No workout for this day. Rest day! 😴</p>
                   )}
                 </div>
-
-                {/* Start Workout Button */}
-                {todayWorkout && (
-                  <button className="btn-primary start-workout-btn" onClick={() => navigate('/workout')}>
-                    🎥 Start AI Workout Tracker
-                  </button>
-                )}
               </section>
             </div>
 
-            {/* Doctor's Notes */}
+            {/* AI/Doctor's Notes */}
             {plan.notes && (
               <div className="notes-card">
                 <h4>📝 {plan.plan_type === 'manual' ? "Doctor's Notes" : "AI Notes"}</h4>
@@ -306,7 +313,7 @@ export default function OutsiderWorkspace() {
         )}
       </main>
 
-      {/* Floating Chatbot Button */}
+      {/* Floating Chatbot Button (for outsiders) */}
       {userRole === 'outsider' && (
         <button
           className="fab-chat"

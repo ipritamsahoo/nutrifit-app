@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 import httpx
 import csv
 import re
+
 from pathlib import Path
 
 router = APIRouter(tags=["Motion Tracking & Exercises"])
@@ -110,6 +111,7 @@ def construct_musclewiki_video_url(musclewiki_url: str) -> dict | None:
         if len(parts) >= 4:
             equipment_slug = parts[0]
             gender = parts[1]
+
             exercise_slug = parts[-1] 
             
             # Equipment needs Title Case, preserving hyphens (e.g. smith-machine -> Smith-Machine)
@@ -129,6 +131,7 @@ def construct_musclewiki_video_url(musclewiki_url: str) -> dict | None:
                 "side": f"/proxy-video?file={side_encoded}"
             }
     except Exception:
+
         pass
     
     return None
@@ -204,6 +207,7 @@ def normalize_exercise_name(name: str) -> str:
     if words and words[-1] not in no_strip and words[-1].endswith('s') and len(words[-1]) > 3:
         last_word: str = words[-1]
         words[-1] = last_word.removesuffix('s')
+
     return ' '.join(words)
 
 
@@ -288,9 +292,10 @@ async def get_musclewiki_video(name: str):
         if male_url:
             video_urls = construct_musclewiki_video_url(male_url)
             if video_urls:
-                # --- SERVER SIDE VALIDATION ---
-                # Verify the file exists on the media server before returning.
-                # Use a proper User-Agent and slightly longer timeout for reliability.
+                # --- SERVER SIDE VALIDATION (DISABLED FOR STABILITY) ---
+                # MuscleWiki media server sometimes blocks HEAD requests, causing false negatives.
+                # We will trust our CSV mapping and let the frontend handle fallback.
+                """
                 try:
                     target_filename_quoted = video_urls["front"].split("?file=")[1]
                     check_url = f"https://media.musclewiki.com/media/uploads/videos/branded/{target_filename_quoted}"
@@ -307,7 +312,8 @@ async def get_musclewiki_video(name: str):
                 except Exception as e:
                     print(f"[MuscleWiki] Warning: Verification failed for {name}. Falling back. Error: {e}")
                     return {"found": False}
-                # ------------------------------
+                """
+                # ----------------------------------------------------
                 
                 return {
                     "found": True,
@@ -319,3 +325,4 @@ async def get_musclewiki_video(name: str):
                 }
 
     return {"found": False}
+

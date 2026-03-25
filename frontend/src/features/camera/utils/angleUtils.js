@@ -32,97 +32,90 @@ export function calculateAngle(p1, p2, p3) {
   return angle;
 }
 
-/* ── Squat thresholds ──────────────────────────────────────────── */
-const SQUAT_DOWN_THRESHOLD = 100;  // Below this = full depth
-const SQUAT_UP_THRESHOLD   = 160;  // Above this = standing
-const SQUAT_START_ANGLE    = 170;  // Starting/standing angle
+/* ── Dynamic Generic Rep Tracking ────────────────────────────────┤
+ * Generic tracking logic that works for ANY exercise pattern by
+ * looking at its configuration (upThreshold, downThreshold, startPosition).
+ */
 
 /**
- * Checks Rep logic for a Squat with enhanced feedback.
- *
- * @param {number} angle - The calculated knee angle
+ * Checks Rep logic dynamically for any exercise.
+ * 
+ * @param {number} angle - The calculated joint angle
  * @param {string} currentState - 'up' or 'down'
+ * @param {Object} config - The exercise pattern configuration
  * @returns {Object} { newState, repCompleted, feedback, progress, isCorrect }
  */
-export function checkRepSquat(angle, currentState) {
+export function checkGenericRep(angle, currentState, config) {
   let newState = currentState;
   let repCompleted = false;
   let feedback = '';
   let isCorrect = false;
 
-  // Progress: how far into the squat (0 = standing, 100 = full depth)
-  const progress = Math.max(0, Math.min(100,
-    ((SQUAT_START_ANGLE - angle) / (SQUAT_START_ANGLE - SQUAT_DOWN_THRESHOLD)) * 100
-  ));
+  const { upThreshold, downThreshold, startPosition } = config;
 
-  if (angle > SQUAT_UP_THRESHOLD) {
-    if (currentState === 'down') {
-      repCompleted = true;
-      feedback = '✅ Rep Complete!';
-    } else {
-      feedback = 'Ready! Go down slowly.';
-    }
-    newState = 'up';
-  } else if (angle < SQUAT_DOWN_THRESHOLD) {
-    feedback = '🔥 Perfect depth! Push up!';
-    isCorrect = true;
-    newState = 'down';
-  } else if (angle >= SQUAT_DOWN_THRESHOLD && angle <= 130) {
-    feedback = 'Almost there, go deeper!';
-    newState = 'down';
-  } else if (angle > 130 && angle <= SQUAT_UP_THRESHOLD) {
-    if (currentState === 'up') {
-      feedback = 'Going down... keep going!';
-    } else {
-      feedback = 'Pushing up... good!';
-    }
+  // Determine if UP is a smaller angle (e.g., Curl 35 < 150) or larger (Squat 160 > 100)
+  const isUpSmaller = upThreshold < downThreshold;
+
+  // Evaluate if current angle meets the logical "up" or "down" criteria
+  const isAngleUp = isUpSmaller ? (angle <= upThreshold) : (angle >= upThreshold);
+  const isAngleDown = isUpSmaller ? (angle >= downThreshold) : (angle <= downThreshold);
+
+  // Calculate Progress (0 to 100%)
+  // If we start UP (e.g., Squat), progress moves towards DOWN.
+  // If we start DOWN (e.g., Curl), progress moves towards UP.
+  let progress = 0;
+  if (startPosition === 'up') {
+    progress = ((upThreshold - angle) / (upThreshold - downThreshold)) * 100;
+  } else {
+    progress = ((downThreshold - angle) / (downThreshold - upThreshold)) * 100;
   }
+  progress = Math.max(0, Math.min(100, progress));
 
-  return { newState, repCompleted, feedback, progress, isCorrect };
-}
-
-/* ── Bicep Curl thresholds ─────────────────────────────────────── */
-const CURL_UP_THRESHOLD    = 35;   // Below this = fully curled
-const CURL_DOWN_THRESHOLD  = 160;  // Above this = arm straight
-const CURL_START_ANGLE     = 170;  // Starting/straight angle
-
-/**
- * Checks Rep logic for a Bicep Curl with enhanced feedback.
- *
- * @param {number} angle - The calculated elbow angle
- * @param {string} currentState - 'up' or 'down'
- * @returns {Object} { newState, repCompleted, feedback, progress, isCorrect }
- */
-export function checkRepBicepCurl(angle, currentState) {
-  let newState = currentState;
-  let repCompleted = false;
-  let feedback = '';
-  let isCorrect = false;
-
-  // Progress: how far into the curl (0 = straight, 100 = fully curled)
-  const progress = Math.max(0, Math.min(100,
-    ((CURL_START_ANGLE - angle) / (CURL_START_ANGLE - CURL_UP_THRESHOLD)) * 100
-  ));
-
-  if (angle > CURL_DOWN_THRESHOLD) {
-    feedback = 'Full stretch! Now curl up.';
-    newState = 'down';
-  } else if (angle < CURL_UP_THRESHOLD) {
-    if (currentState === 'down') {
-      repCompleted = true;
-      feedback = '✅ Rep Complete!';
+  // Determine standard feedback messages
+  const msgPerfectWork = '🔥 Great form!';
+  const msgRepComplete = '✅ Rep Complete!';
+  
+  if (startPosition === 'up') {
+    // Cycle: UP(Rest) -> DOWN(Work) -> UP(Complete Rep)
+    if (isAngleUp) {
+      if (currentState === 'down') {
+        repCompleted = true;
+        feedback = msgRepComplete;
+      } else {
+        feedback = 'Ready! Control the negative.';
+      }
+      newState = 'up';
+    } else if (isAngleDown) {
+      feedback = msgPerfectWork;
+      isCorrect = true;
+      newState = 'down';
     } else {
-      feedback = '🔥 Great squeeze!';
+      // In transition
+      if (currentState === 'up') feedback = 'Going down... almost there!';
+      else feedback = 'Pushing up... keep going!';
     }
-    isCorrect = true;
-    newState = 'up';
-  } else if (angle >= CURL_UP_THRESHOLD && angle <= 70) {
-    feedback = 'Almost there, squeeze harder!';
-  } else if (angle > 70 && angle <= CURL_DOWN_THRESHOLD) {
-    if (currentState === 'down') {
-      feedback = 'Keep curling...';
+  } else {
+    // startPosition === 'down'
+    // Cycle: DOWN(Rest) -> UP(Work) -> DOWN(Complete Rep)
+    // Note: Users often like seeing "Rep Complete" at the peak of contraction.
+    // To reward the concentric phase, we will flag completion when hitting UP, 
+    // and just reset when hitting DOWN.
+    if (isAngleDown) {
+      feedback = 'Ready! Contract the muscle.';
+      newState = 'down';
+    } else if (isAngleUp) {
+      if (currentState === 'down') {
+        repCompleted = true;
+        feedback = msgRepComplete;
+      } else {
+        feedback = msgPerfectWork;
+      }
+      isCorrect = true;
+      newState = 'up';
     } else {
-      feedback = 'Lowering... control the motion.';
+      // In transition
+      if (currentState === 'down') feedback = 'Contracting... squeeze!';
+      else feedback = 'Lowering... control it!';
     }
   }
 
