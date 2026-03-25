@@ -81,7 +81,7 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          uid: 'new-patient',
+          uid: 'new-patient', // Temporary UID for generation
           age: parseInt(age) || 25,
           weight: parseFloat(weight) || 70,
           height: parseFloat(height) || 170,
@@ -91,22 +91,39 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
       });
       if (res.ok) {
         const data = await res.json();
-        const plan = data.plan || {};
-        if (plan.diet_plan) {
-          setBreakfast(plan.diet_plan.breakfast || '');
-          setLunch(plan.diet_plan.lunch || '');
-          setDinner(plan.diet_plan.dinner || '');
+        const fullPlan = data.plan || {};
+        
+        // Gemini returns a 7-day structure. We extract Day 1 for the initial prescription.
+        const day1Diet = fullPlan.diet_plan?.day_1 || {};
+        const day1Workout = fullPlan.workout_plan?.day_1 || {};
+
+        if (day1Diet.breakfast) {
+          const b = day1Diet.breakfast;
+          setBreakfast(typeof b === 'object' ? `${b.meal}${b.calories ? ` (${b.calories} cal)` : ''}` : b);
         }
-        if (plan.workout_plan?.exercises) {
-          setExercises(plan.workout_plan.exercises.map((ex, i) => ({
-            id: `ex_${i}`, name: ex.name || '', sets: ex.sets || 3, reps: ex.reps || 10,
+        if (day1Diet.lunch) {
+          const l = day1Diet.lunch;
+          setLunch(typeof l === 'object' ? `${l.meal}${l.calories ? ` (${l.calories} cal)` : ''}` : l);
+        }
+        if (day1Diet.dinner) {
+          const d = day1Diet.dinner;
+          setDinner(typeof d === 'object' ? `${d.meal}${d.calories ? ` (${d.calories} cal)` : ''}` : d);
+        }
+
+        if (day1Workout.exercises) {
+          setExercises(day1Workout.exercises.map((ex, i) => ({
+            id: `ex_${i}`, 
+            name: ex.name || '', 
+            sets: ex.sets || 3, 
+            reps: ex.reps || 10,
           })));
         }
         setShowChart(true);
       } else {
         simulateFallback();
       }
-    } catch {
+    } catch (err) {
+      console.error("[AI] Generation failed:", err);
       simulateFallback();
     } finally {
       setGenerating(false);

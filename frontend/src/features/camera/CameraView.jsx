@@ -37,11 +37,11 @@ const EXERCISES = Object.keys(EXERCISE_MAPPINGS).map(name => {
   if (cfg.category === 'lower_body') icon = '🦵';
   else if (cfg.category === 'upper_body') icon = '💪';
   else if (cfg.category === 'core') icon = '🔥';
-  
-  return { id: name, name: name, icon };
-}).sort((a,b) => a.name.localeCompare(b.name));
 
-function CameraView() {
+  return { id: name, name: name, icon };
+}).sort((a, b) => a.name.localeCompare(b.name));
+
+function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose, onRepUpdate }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
@@ -77,6 +77,8 @@ function CameraView() {
 
   const [videoDims, setVideoDims] = useState({ width: REQUESTED_WIDTH, height: REQUESTED_HEIGHT });
   const [exerciseType, setExerciseType] = useState(() => {
+    // If embedded with specific exercise, use that
+    if (exerciseNameProp && EXERCISES.some(e => e.id === exerciseNameProp)) return exerciseNameProp;
     const urlEx = searchParams.get('exercise');
     if (urlEx && EXERCISES.some(e => e.id === urlEx)) return urlEx;
     return EXERCISES.find(e => e.name === 'Barbell Forward Lunge')?.id || EXERCISES[0].id;
@@ -229,7 +231,7 @@ function CameraView() {
           const landmarks = drawLandmarks;
           const config = getExerciseConfig(exerciseType) || getExerciseConfig('default');
           const [j1, j2, j3] = config.joints;
-          
+
           let p1 = landmarks[j1];
           let p2 = landmarks[j2];
           let p3 = landmarks[j3];
@@ -249,6 +251,7 @@ function CameraView() {
             if (res.repCompleted) {
               repsRef.current += 1;
               setRepsDisplay(repsRef.current);
+              if (onRepUpdate) onRepUpdate(repsRef.current);
             }
 
             // Track successful reps (where target depth was hit)
@@ -308,9 +311,14 @@ function CameraView() {
   }, [exerciseType, isMuted]);
 
   /* ── Save workout log to Firestore ─────────────────────────── */
+  const exitView = useCallback(() => {
+    if (embedded && onClose) onClose();
+    else navigate(-1);
+  }, [embedded, onClose, navigate]);
+
   async function saveWorkoutLog() {
     if (repsRef.current === 0) {
-      navigate(-1);
+      exitView();
       return;
     }
 
@@ -337,11 +345,11 @@ function CameraView() {
         created_at: new Date().toISOString(),
       });
 
-      navigate(-1);
+      exitView();
     } catch (err) {
       console.error('Failed to save log:', err);
       alert('Failed to save workout log. Your reps: ' + repsRef.current);
-      navigate(-1);
+      exitView();
     } finally {
       setSaving(false);
     }
@@ -356,43 +364,61 @@ function CameraView() {
   /* ── Render ────────────────────────────────────────────────── */
   if (cameraError) {
     return (
-      <div className="camera-view">
+      <div className={`camera-view ${embedded ? 'camera-view--embedded' : ''}`}>
         <div className="camera-error">
           <div className="error-icon">🎥</div>
           <h2>Camera Access Required</h2>
           <p>Please allow camera permission in your browser settings and reload the page.</p>
-          <button className="btn-back" onClick={() => navigate(-1)}>← Go Back</button>
+          <button className="btn-back" onClick={exitView}>← Go Back</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="camera-view">
-      {/* Header */}
-      <header className="cv-header">
-        <button className="btn-back" onClick={saveWorkoutLog} disabled={saving}>
-          {saving ? 'Saving…' : '← Save & Exit'}
-        </button>
-        <h1 className="cv-title">🎥 AI Workout Tracker</h1>
-        <div className="cv-stats">
-          <div className="cv-reps-badge">
-            <span className="reps-num">{repsDisplay}</span>
-            <span className="reps-label">REPS</span>
+    <div className={`camera-view ${embedded ? 'camera-view--embedded' : ''}`}>
+      {/* Header — only shown in standalone mode */}
+      {!embedded && (
+        <header className="cv-header">
+          <button className="btn-back" onClick={saveWorkoutLog} disabled={saving}>
+            {saving ? 'Saving…' : '← Save & Exit'}
+          </button>
+          <h1 className="cv-title">🎥 AI Workout Tracker</h1>
+          <div className="cv-stats">
+            <div className="cv-reps-badge">
+              <span className="reps-num">{repsDisplay}</span>
+              <span className="reps-label">REPS</span>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      {/* Exercise Badge + Mute Button */}
-      <div className="exercise-selector" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <div 
-          className="active-exercise-badge"
-          style={{ padding: '8px 16px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          {EXERCISES.find(e => e.id === exerciseType)?.icon || '🏋️'} {EXERCISES.find(e => e.id === exerciseType)?.name || exerciseType}
+      {/* Exercise Badge + Mute — only shown in standalone mode */}
+      {!embedded && (
+        <div className="exercise-selector" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div
+            className="active-exercise-badge"
+            style={{ padding: '8px 16px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            {EXERCISES.find(e => e.id === exerciseType)?.icon || '🏋️'} {EXERCISES.find(e => e.id === exerciseType)?.name || exerciseType}
+          </div>
+          <button
+            className={`ex-btn mute-btn ${isMuted ? 'muted' : ''}`}
+            onClick={() => {
+              setIsMuted(prev => !prev);
+              if (!isMuted) stopSpeaking();
+            }}
+            title={isMuted ? 'Unmute voice' : 'Mute voice'}
+          >
+            {isMuted ? '🔇' : '🔊'}
+          </button>
         </div>
+      )}
+
+      {/* Embedded: Mute toggle floats on the video */}
+      {embedded && (
         <button
-          className={`ex-btn mute-btn ${isMuted ? 'muted' : ''}`}
+          className={`cv-embedded-mute ${isMuted ? 'muted' : ''}`}
           onClick={() => {
             setIsMuted(prev => !prev);
             if (!isMuted) stopSpeaking();
@@ -401,21 +427,21 @@ function CameraView() {
         >
           {isMuted ? '🔇' : '🔊'}
         </button>
-      </div>
+      )}
 
       {/* Video + Canvas container */}
       <div
         className="video-container"
-        style={{
+        style={embedded ? { width: '100%', height: '100%' } : {
           width: '100%',
           maxWidth: videoDims.width,
           aspectRatio: `${videoDims.width} / ${videoDims.height}`,
         }}
       >
         {loading && (
-          <div className="loading-overlay">
-            <div className="spinner" />
-            <p>Loading pose model…</p>
+          <div className={`loading-overlay ${embedded ? 'loading-overlay--embedded' : ''}`}>
+            <div className={`spinner ${embedded ? 'spinner--embedded' : ''}`} />
+            <p>{embedded ? 'Initializing AI Posture Tracker…' : 'Loading pose model…'}</p>
           </div>
         )}
 

@@ -22,8 +22,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 40px 40px;
   pointer-events: none;
 }
@@ -57,9 +57,9 @@
   border-radius: 16px;
   overflow: hidden;
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.06),
-    0 20px 60px rgba(0,0,0,0.5),
-    0 0 40px rgba(0,200,255,0.08);
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(0, 200, 255, 0.08);
   z-index: 1;
 }
 
@@ -98,7 +98,7 @@
   padding: 4px 10px;
   border-radius: 8px;
   font-variant-numeric: tabular-nums;
-  border: 1px solid rgba(0,255,170,0.15);
+  border: 1px solid rgba(0, 255, 170, 0.15);
   z-index: 2;
 }
 
@@ -155,13 +155,27 @@
 }
 
 @keyframes pulse-green {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.4; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }
 
 @keyframes pulse-red {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.4; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }
 
 /* ── Loading overlay ───────────────────────────────────────────── */
@@ -184,14 +198,16 @@
 .spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid rgba(255,255,255,0.1);
+  border: 3px solid rgba(255, 255, 255, 0.1);
   border-top-color: #00ffaa;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Camera error fallback ─────────────────────────────────────── */
@@ -229,6 +245,7 @@
   z-index: 3;
   position: relative;
 }
+
 .cv-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -237,7 +254,12 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.cv-stats { display: flex; align-items: center; }
+
+.cv-stats {
+  display: flex;
+  align-items: center;
+}
+
 .cv-reps-badge {
   display: flex;
   flex-direction: column;
@@ -247,12 +269,14 @@
   border-radius: 14px;
   padding: 6px 18px;
 }
+
 .reps-num {
   font-size: 28px;
   font-weight: 700;
   color: #a5b4fc;
   line-height: 1;
 }
+
 .reps-label {
   font-size: 10px;
   color: #6b7280;
@@ -271,11 +295,16 @@
   font-size: 13px;
   transition: all 0.2s;
 }
+
 .btn-back:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
-.btn-back:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-back:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* ── Exercise Selector ────────────────────────────────────────── */
 .exercise-selector {
@@ -284,6 +313,7 @@
   z-index: 2;
   margin-bottom: 12px;
 }
+
 .ex-btn {
   padding: 8px 18px;
   border-radius: 12px;
@@ -294,12 +324,16 @@
   cursor: pointer;
   transition: all 0.2s;
 }
+
 .ex-btn.active {
   background: rgba(0, 255, 170, 0.12);
   border-color: rgba(0, 255, 170, 0.3);
   color: #00ffaa;
 }
-.ex-btn:hover { background: rgba(255, 255, 255, 0.08); }
+
+.ex-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
 
 /* ── Mute Button ─────────────────────────────────────────────── */
 .mute-btn {
@@ -307,6 +341,7 @@
   min-width: 44px;
   text-align: center;
 }
+
 .mute-btn.muted {
   background: rgba(255, 80, 80, 0.12);
   border-color: rgba(255, 80, 80, 0.3);
@@ -353,8 +388,15 @@
 }
 
 @keyframes feedbackSlideIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 /* ── Progress Gauge (vertical bar on right) ──────────────────── */
@@ -417,4 +459,90 @@
   font-weight: 600;
   color: rgba(255, 255, 255, 0.4);
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Embedded Mode (inside UserWorkspace) ─────────────────────── */
+.camera-view--embedded {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  gap: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.camera-view--embedded::before {
+  display: none;
+}
+
+.camera-view--embedded .video-container {
+  border-radius: 0;
+  box-shadow: none;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  aspect-ratio: unset !important;
+}
+
+.camera-view--embedded .webcam-video {
+  border-radius: 0;
+  object-fit: cover;
+}
+
+.camera-view--embedded .loading-overlay--embedded {
+  background: rgba(248, 250, 252, 0.95);
+  color: #334155;
+}
+
+.camera-view--embedded .spinner--embedded {
+  border-color: rgba(37, 99, 235, 0.15);
+  border-top-color: #2563eb;
+}
+
+.camera-view--embedded .loading-overlay--embedded p {
+  color: #64748b;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.camera-view--embedded .feedback-overlay {
+  top: auto;
+  bottom: 74px;
+  font-size: 0.9rem;
+}
+
+.camera-view--embedded .fps-counter {
+  font-size: 0.7rem;
+}
+
+/* Floating mute button in embedded mode */
+.cv-embedded-mute {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.cv-embedded-mute:hover {
+  background: rgba(0, 0, 0, 0.65);
+  transform: scale(1.1);
+}
+
+.cv-embedded-mute.muted {
+  background: rgba(239, 68, 68, 0.7);
+  border-color: rgba(239, 68, 68, 0.5);
 }
