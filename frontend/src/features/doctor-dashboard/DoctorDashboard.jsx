@@ -17,10 +17,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import './DoctorDashboard.css';
 import EnrollPrescribeModal from './EnrollPrescribeModal';
+import DoctorChatbotWidget from './DoctorChatbotWidget';
 
 const API_URL = 'http://localhost:8000';
 
@@ -38,7 +39,7 @@ function adhClass(score) {
 }
 
 export default function DoctorDashboard() {
-  const { currentUser, userData, logout } = useAuth();
+  const { currentUser, userData, logout, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   /* ── Patient state ─────────────────────────────────── */
@@ -64,21 +65,18 @@ export default function DoctorDashboard() {
     exercises: []
   });
 
-  /* ── Fetch patients from Firebase ──────────────────── */
+  /* ── Real-time Patient Listener ────────────────────── */
   useEffect(() => {
     if (!currentUser) return;
-    fetchPatients();
-  }, [currentUser]);
 
-  async function fetchPatients() {
     setLoadingPatients(true);
-    try {
-      const q = query(
-        collection(db, 'users'),
-        where('doctor_id', '==', currentUser.uid),
-        where('role', '==', 'insider')
-      );
-      const snap = await getDocs(q);
+    const q = query(
+      collection(db, 'users'),
+      where('doctor_id', '==', currentUser.uid),
+      where('role', '==', 'insider')
+    );
+
+    const unsubscribe = onSnapshot(q, (snap) => {
       const data = snap.docs.map(d => {
         const raw = d.data();
         return {
@@ -93,13 +91,21 @@ export default function DoctorDashboard() {
         };
       });
       setPatients(data);
-      if (data.length > 0 && !selectedPatient) setSelectedPatient(data[0]);
-    } catch (err) {
-      console.error('Error fetching patients:', err);
-    } finally {
+      // Update selected patient data if they are in the list
+      if (data.length > 0 && !selectedPatient) {
+        setSelectedPatient(data[0]);
+      } else if (selectedPatient) {
+        const updated = data.find(p => p.id === selectedPatient.id);
+        if (updated) setSelectedPatient(updated);
+      }
       setLoadingPatients(false);
-    }
-  }
+    }, (err) => {
+      console.error('Error listening to patients:', err);
+      setLoadingPatients(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   useEffect(() => {
     if (selectedPatient?.goal) setPrescription(p => ({ ...p, goal: selectedPatient.goal }));
@@ -135,15 +141,30 @@ export default function DoctorDashboard() {
       });
       if (res.ok) {
         const data = await res.json();
-        const plan = data.plan || {};
+        const fullPlan = data.plan || {};
+        
+        // Gemini returns a 7-day structure. We extract Day 1 for the initial prescription.
+        const d1Diet = fullPlan.diet_plan?.day_1 || {};
+        const d1Workout = fullPlan.workout_plan?.day_1 || {};
+
         setPrescription(p => ({
           ...p,
-          detox: plan.diet_plan?.detox || '',
-          breakfast: plan.diet_plan?.breakfast || '',
-          lunch: plan.diet_plan?.lunch || '',
-          dinner: plan.diet_plan?.dinner || '',
-          snack: plan.diet_plan?.snack || '',
-          exercises: (plan.workout_plan?.exercises || []).map(ex => ({
+          detox: d1Diet.detox 
+            ? (typeof d1Diet.detox === 'object' ? `${d1Diet.detox.meal}${d1Diet.detox.calories ? ` (${d1Diet.detox.calories} cal)` : ''}` : d1Diet.detox)
+            : '',
+          breakfast: d1Diet.breakfast
+            ? (typeof d1Diet.breakfast === 'object' ? `${d1Diet.breakfast.meal}${d1Diet.breakfast.calories ? ` (${d1Diet.breakfast.calories} cal)` : ''}` : d1Diet.breakfast)
+            : '',
+          lunch: d1Diet.lunch
+            ? (typeof d1Diet.lunch === 'object' ? `${d1Diet.lunch.meal}${d1Diet.lunch.calories ? ` (${d1Diet.lunch.calories} cal)` : ''}` : d1Diet.lunch)
+            : '',
+          snack: d1Diet.snacks
+            ? (typeof d1Diet.snacks === 'object' ? `${d1Diet.snacks.meal}${d1Diet.snacks.calories ? ` (${d1Diet.snacks.calories} cal)` : ''}` : d1Diet.snacks)
+            : '',
+          dinner: d1Diet.dinner
+            ? (typeof d1Diet.dinner === 'object' ? `${d1Diet.dinner.meal}${d1Diet.dinner.calories ? ` (${d1Diet.dinner.calories} cal)` : ''}` : d1Diet.dinner)
+            : '',
+          exercises: (d1Workout.exercises || []).map(ex => ({
             name: ex.name, sets: ex.sets || 3, reps: ex.reps || 10
           })),
         }));
@@ -197,8 +218,17 @@ export default function DoctorDashboard() {
   );
 
   /* ── Loading ───────────────────────────────────────── */
-  if (loadingPatients) return (
-    <div className="cmd-loading"><div className="cmd-spinner" /></div>
+  if (authLoading || (currentUser && loadingPatients)) return (
+    <div className="cmd-loading" style={{ 
+      height: '100vh', width: '100%', display: 'flex', alignItems: 'center', 
+      justifyContent: 'center', background: '#0a0a0a', color: '#6366f1' 
+    }}>
+      <div className="cmd-spinner" style={{
+        width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)',
+        borderTopColor: 'currentColor', borderRadius: '50%', animation: 'spin 1s linear infinite'
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
   );
 
   /* ══════════════════════════════════════════════════════
@@ -486,7 +516,7 @@ export default function DoctorDashboard() {
       {showAddModal && (
         <EnrollPrescribeModal
           doctorUid={currentUser.uid}
-          onSuccess={() => { fetchPatients(); setShowAddModal(false); }}
+          onSuccess={() => { setShowAddModal(false); }}
           onClose={() => setShowAddModal(false)}
         />
       )}
@@ -519,6 +549,9 @@ export default function DoctorDashboard() {
           </div>
         </div>
       )}
+
+      {/* ═══ FLOATING AI CHATBOT ═══ */}
+      <DoctorChatbotWidget />
     </div>
   );
 }

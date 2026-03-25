@@ -55,14 +55,18 @@ export default function AuthProvider({ children }) {
             setHasPlan(!planSnap.empty);
           }
         } catch (err) {
-          console.warn('[Auth] Could not fetch user role:', err);
+          console.error('[Auth] Firestore Error (onAuthStateChanged):', err);
+        } finally {
+          setLoading(false);
+          console.log('[Auth] Loading resolved (onAuthStateChanged). Role:', userRole);
         }
       } else {
         setUserRole(null);
         setUserData(null);
         setHasPlan(false);
+        setLoading(false);
+        console.log('[Auth] User logged out.');
       }
-      setLoading(false);
     });
     return unsub;
   }, []);
@@ -120,14 +124,18 @@ export default function AuthProvider({ children }) {
           setHasPlan(!planSnap.empty);
         }
       } catch (err) {
-        console.warn('[Auth] Could not fetch user role on login:', err);
+        console.error('[Auth] Firestore Error (login):', err);
       }
 
       setCurrentUser(cred.user);
       return cred;
+    } catch (err) {
+      console.error('[Auth] Auth Error (login):', err);
+      throw err;
     } finally {
       setLoading(false);
       isAuthAction.current = false;
+      console.log('[Auth] Login action finished.');
     }
   }
 

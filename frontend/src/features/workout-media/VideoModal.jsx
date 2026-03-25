@@ -4,7 +4,7 @@ import { muscleWikiCache } from './exerciseCache';
 import { useNavigate } from 'react-router-dom';
 import './VideoModal.css';
 
-export default function VideoModal({ exerciseName, videos, muscleGroup, difficulty, onClose, isLoading }) {
+export default function VideoModal({ exerciseName, videos, muscleGroup, difficulty, onClose, isLoading, onTrackExercise }) {
   const [frontLoaded, setFrontLoaded] = useState(false);
   const [sideLoaded, setSideLoaded] = useState(false);
   const [frontError, setFrontError] = useState(false);
@@ -211,7 +211,11 @@ export default function VideoModal({ exerciseName, videos, muscleGroup, difficul
             style={{ padding: '8px 16px', fontSize: '0.9rem', borderRadius: '8px' }}
             onClick={() => {
               onClose();
-              navigate(`/workout?exercise=${encodeURIComponent(exerciseName)}`);
+              if (onTrackExercise) {
+                onTrackExercise(exerciseName);
+              } else {
+                navigate(`/workout?exercise=${encodeURIComponent(exerciseName)}`);
+              }
             }}
           >
             🎥 Track this Exercise
