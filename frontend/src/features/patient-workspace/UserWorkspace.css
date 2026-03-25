@@ -1,4 +1,4 @@
-/* InsiderWorkspace.css — Full workspace styling */
+/* UserWorkspace.css — Full workspace styling */
 
 .workspace-page {
   min-height: 100vh;
@@ -133,6 +133,8 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .tc-header {
   display: flex;
@@ -150,6 +152,7 @@
 
 .tc-body {
   padding: 18px 22px;
+  flex: 1;
 }
 
 /* Meal Items */
@@ -183,7 +186,6 @@
 }
 
 /* Exercise Items */
-/* Modern Exercise Items (New Design) */
 .exercise-item {
   position: relative;
   display: flex !important;
@@ -211,7 +213,6 @@
   transition: all 0.3s ease;
 }
 
-/* Alternate glow colors for variety */
 .exercise-item:nth-child(even)::before {
   background: linear-gradient(180deg, #06b6d4, #3b82f6);
   box-shadow: 0 0 15px rgba(6, 182, 212, 0.8);
@@ -228,10 +229,7 @@
   top: 0;
 }
 
-.ex-item-content {
-  flex: 1;
-}
-
+.ex-item-content { flex: 1; }
 .ex-name {
   font-size: 1.1rem !important;
   font-weight: 700 !important;
@@ -240,7 +238,6 @@
   margin-bottom: 4px !important;
   letter-spacing: 0.3px;
 }
-
 .ex-detail {
   font-size: 14px !important;
   color: #9ca3af !important;
@@ -283,20 +280,6 @@
   transition: all 0.3s ease;
 }
 
-.exercise-item:hover .ex-muscle-preview {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-.workout-duration {
-  margin-top: 12px;
-  font-size: 13px;
-  color: #9ca3af;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
-  text-align: center;
-}
-
 .tc-footer {
   padding: 14px 22px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -306,12 +289,6 @@
 
 .plan-text { color: #d1d5db; font-size: 14px; line-height: 1.6; }
 .no-data { color: #6b7280; font-size: 14px; font-style: italic; }
-
-/* Start Workout Button */
-.task-card .start-workout-btn {
-  margin: 0 22px 18px;
-  width: calc(100% - 44px);
-}
 
 /* ── Notes Card ──────────────────────────────────── */
 .notes-card {
@@ -348,17 +325,6 @@
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
 }
-.btn-outline {
-  background: none;
-  border: 1px solid rgba(99, 102, 241, 0.4);
-  color: #a5b4fc;
-  padding: 8px 18px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-.btn-outline:hover { background: rgba(99, 102, 241, 0.1); }
 .btn-ghost {
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -395,15 +361,7 @@
   100% { transform: translate(40px, -30px) scale(1.15); }
 }
 
-/* ── Responsive ──────────────────────────────────── */
-@media (max-width: 640px) {
-  .ws-header { flex-direction: column; gap: 12px; }
-  .tasks-grid { grid-template-columns: 1fr; }
-  .day-selector { gap: 6px; }
-  .day-btn { padding: 6px 12px; font-size: 12px; }
-}
-
-/* ── Floating Chat Button ─────────────────────────── */
+/* ── Floating Chat Button (Outsider only) ─────────── */
 .fab-chat {
   position: fixed;
   bottom: 40px;
@@ -423,17 +381,13 @@
   z-index: 1000;
   transition: all 0.3s;
 }
-
 .fab-chat:hover {
   transform: translateY(-5px) scale(1.05);
   box-shadow: 0 12px 40px rgba(99, 102, 241, 0.6);
 }
 
 @media (max-width: 640px) {
-  .fab-chat {
-    bottom: 20px;
-    right: 20px;
-    padding: 14px 24px;
-    font-size: 1rem;
-  }
+  .ws-header { flex-direction: column; gap: 12px; }
+  .tasks-grid { grid-template-columns: 1fr; }
+  .fab-chat { bottom: 20px; right: 20px; padding: 14px 24px; font-size: 1rem; }
 }

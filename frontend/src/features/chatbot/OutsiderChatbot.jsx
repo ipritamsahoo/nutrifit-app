@@ -131,8 +131,8 @@ export default function OutsiderChatbot() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Approval failed');
 
-      // Navigate to outsider workspace
-      navigate('/outsider-workspace');
+      // Navigate to unified workspace
+      navigate('/workspace');
     } catch (err) {
       alert('Failed to approve plan: ' + err.message);
     } finally {
@@ -199,10 +199,6 @@ export default function OutsiderChatbot() {
       <div className="bg-blob blob-1" />
       <div className="bg-blob blob-2" />
 
-      {/* Floating Dashboard Button */}
-      <button className="floating-dashboard-btn" onClick={() => navigate('/outsider-workspace')}>
-        📊 Workspace
-      </button>
 
       {/* Header */}
       <header className="chat-header">
@@ -211,7 +207,7 @@ export default function OutsiderChatbot() {
           <h1>HonFit — Virtual Coach</h1>
         </div>
         <div className="chat-actions">
-          <button className="btn-dashboard" onClick={() => navigate('/outsider-workspace')}>
+          <button className="btn-dashboard" onClick={() => navigate('/workspace')}>
             📊 Workspace
           </button>
           <button className="btn-ghost" onClick={handleLogout}>Logout</button>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { muscleWikiCache } from './exerciseCache';
+import { useNavigate } from 'react-router-dom';
 import './VideoModal.css';
 
 export default function VideoModal({ exerciseName, videos, muscleGroup, difficulty, onClose, isLoading }) {
@@ -11,6 +12,7 @@ export default function VideoModal({ exerciseName, videos, muscleGroup, difficul
   const [showSplitView, setShowSplitView] = useState(false);
   const [progress, setProgress] = useState(0);
   const [loaderConfig, setLoaderConfig] = useState(null);
+  const navigate = useNavigate();
 
   // Helper to ensure URL is correct (using relative paths for Vite proxy)
   const getAbsoluteUrl = (url) => {
@@ -195,13 +197,25 @@ export default function VideoModal({ exerciseName, videos, muscleGroup, difficul
           </div>
         )}
 
-        <div className="video-modal-footer">
-          <span className="muscle-badge">💪 {muscleGroup || 'Muscle Target'}</span>
-          {difficulty && (
-            <span className="muscle-badge" style={{ background: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.3)', color: '#6ee7b7' }}>
-              ⚡ {difficulty}
-            </span>
-          )}
+        <div className="video-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <span className="muscle-badge">💪 {muscleGroup || 'Muscle Target'}</span>
+            {difficulty && (
+              <span className="muscle-badge" style={{ background: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.3)', color: '#6ee7b7' }}>
+                ⚡ {difficulty}
+              </span>
+            )}
+          </div>
+          <button 
+            className="btn-primary"
+            style={{ padding: '8px 16px', fontSize: '0.9rem', borderRadius: '8px' }}
+            onClick={() => {
+              onClose();
+              navigate(`/workout?exercise=${encodeURIComponent(exerciseName)}`);
+            }}
+          >
+            🎥 Track this Exercise
+          </button>
         </div>
       </div>
     </div>,

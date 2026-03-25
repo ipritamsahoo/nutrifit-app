@@ -10,27 +10,6 @@
   flex-direction: column;
 }
 
-/* ── Floating Dashboard Button ──────────────────── */
-.floating-dashboard-btn {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 999;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border: none;
-  color: #fff;
-  padding: 10px 22px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.2s;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
-}
-.floating-dashboard-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.6);
-}
 
 /* ── Header ──────────────────────────────────────── */
 .chat-header {
