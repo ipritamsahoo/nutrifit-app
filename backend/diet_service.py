@@ -14,28 +14,66 @@ FOODS = {
         {"name": "Boiled eggs + toast", "type": "non_veg", "tags": ["protein"]},
         {"name": "Poha", "type": "veg", "tags": ["light"]},
         {"name": "Upma", "type": "veg", "tags": ["light"]},
-        {"name": "Banana + peanut butter", "type": "veg", "tags": ["energy"]}
+        {"name": "Banana + peanut butter", "type": "veg", "tags": ["energy"]},
+        {"name": "Idli + sambar", "type": "veg", "tags": ["light"]},
+        {"name": "Dosa + chutney", "type": "veg", "tags": ["light"]},
+        {"name": "Roti + sabji", "type": "veg", "tags": ["balanced"]},
+        {"name": "Vegetable sandwich", "type": "veg", "tags": ["light"]},
+        {"name": "Paneer sandwich", "type": "veg", "tags": ["protein"]},
+        {"name": "Boiled eggs + banana", "type": "non_veg", "tags": ["protein"]},
+        {"name": "Sprouts salad", "type": "veg", "tags": ["protein"]},
+        {"name": "Cornflakes with milk", "type": "veg", "tags": ["energy"]},
+        {"name": "Paratha + curd", "type": "veg", "tags": ["energy"]},
+        {"name": "Besan chilla", "type": "veg", "tags": ["protein"]}
     ],
+
     "lunch": [
         {"name": "Rice + dal + veg", "type": "veg", "tags": ["balanced"]},
         {"name": "Rice + chicken curry", "type": "non_veg", "tags": ["protein"]},
         {"name": "Roti + paneer", "type": "veg", "tags": ["protein"]},
         {"name": "Khichdi", "type": "veg", "tags": ["light"]},
-        {"name": "Fish curry + rice", "type": "non_veg", "tags": ["protein"]}
+        {"name": "Fish curry + rice", "type": "non_veg", "tags": ["protein"]},
+        {"name": "Roti + mixed veg", "type": "veg", "tags": ["balanced"]},
+        {"name": "Rice + rajma", "type": "veg", "tags": ["protein"]},
+        {"name": "Rice + chole", "type": "veg", "tags": ["protein"]},
+        {"name": "Grilled chicken + roti", "type": "non_veg", "tags": ["low_fat"]},
+        {"name": "Paneer curry + rice", "type": "veg", "tags": ["protein"]},
+        {"name": "Egg curry + rice", "type": "non_veg", "tags": ["protein"]},
+        {"name": "Vegetable pulao", "type": "veg", "tags": ["energy"]},
+        {"name": "Chicken pulao", "type": "non_veg", "tags": ["energy"]},
+        {"name": "Dal + roti + salad", "type": "veg", "tags": ["balanced"]},
+        {"name": "Fish fry + rice", "type": "non_veg", "tags": ["fried"]}
     ],
+
     "dinner": [
         {"name": "Roti + veg", "type": "veg", "tags": ["light"]},
         {"name": "Grilled chicken + salad", "type": "non_veg", "tags": ["low_fat"]},
         {"name": "Soup + salad", "type": "veg", "tags": ["low_calorie"]},
         {"name": "Paneer + roti", "type": "veg", "tags": ["protein"]},
-        {"name": "Boiled vegetables", "type": "veg", "tags": ["low_calorie"]}
+        {"name": "Boiled vegetables", "type": "veg", "tags": ["low_calorie"]},
+        {"name": "Dal soup", "type": "veg", "tags": ["light"]},
+        {"name": "Egg omelette + roti", "type": "non_veg", "tags": ["protein"]},
+        {"name": "Vegetable khichdi", "type": "veg", "tags": ["light"]},
+        {"name": "Chicken soup", "type": "non_veg", "tags": ["light"]},
+        {"name": "Paneer salad", "type": "veg", "tags": ["protein"]},
+        {"name": "Grilled fish + veg", "type": "non_veg", "tags": ["low_fat"]},
+        {"name": "Light pulao + raita", "type": "veg", "tags": ["light"]},
+        {"name": "Roti + egg curry", "type": "non_veg", "tags": ["protein"]}
     ],
+
     "snacks": [
         {"name": "Fruits", "type": "veg", "tags": ["healthy"]},
         {"name": "Nuts", "type": "veg", "tags": ["energy"]},
         {"name": "Boiled eggs", "type": "non_veg", "tags": ["protein"]},
         {"name": "Sprouts", "type": "veg", "tags": ["protein"]},
-        {"name": "Yogurt", "type": "veg", "tags": ["light"]}
+        {"name": "Yogurt", "type": "veg", "tags": ["light"]},
+        {"name": "Buttermilk", "type": "veg", "tags": ["light"]},
+        {"name": "Roasted chana", "type": "veg", "tags": ["protein"]},
+        {"name": "Peanut chaat", "type": "veg", "tags": ["energy"]},
+        {"name": "Fruit salad", "type": "veg", "tags": ["healthy"]},
+        {"name": "Protein shake", "type": "veg", "tags": ["protein"]},
+        {"name": "Boiled corn", "type": "veg", "tags": ["light"]},
+        {"name": "Egg sandwich", "type": "non_veg", "tags": ["protein"]}
     ]
 }
 

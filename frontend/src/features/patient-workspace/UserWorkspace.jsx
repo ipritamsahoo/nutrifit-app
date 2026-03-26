@@ -74,6 +74,7 @@ export default function UserWorkspace() {
   const [dietStatus, setDietStatus] = useState({
     breakfast: false,
     lunch: false,
+    snacks: false,
     dinner: false
   });
   const [completedWorkouts, setCompletedWorkouts] = useState([]);
@@ -626,7 +627,84 @@ export default function UserWorkspace() {
             </div>
             
             <div className="exercise-grid">
-              {exercises.length > 0 ? (
+              {exercises.length === 0 || (exercises.length === 1 && exercises[0].name === 'Rest & Recovery') ? (
+                <div className="rest-day-hero" style={{ 
+                  gridColumn: '1 / -1', width: '100%',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', 
+                  justifyContent: 'center', minHeight: '400px', 
+                  background: 'linear-gradient(145deg, #ffffff, #f8fafc)',
+                  border: '1px solid var(--clinical-blue-border, #bfdbfe)',
+                  borderRadius: '24px', padding: '40px 20px',
+                  boxShadow: '0 10px 30px rgba(37,99,235,0.05)',
+                  textAlign: 'center'
+                }}>
+                  <div className="rest-svg-container" style={{ position: 'relative', width: '200px', height: '200px', marginBottom: '24px' }}>
+                    {/* Beautiful Abstract Recovery SVG */}
+                    <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%', animation: 'float 6s ease-in-out infinite' }}>
+                      <defs>
+                        <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                        </radialGradient>
+                        <linearGradient id="battery" x1="0%" y1="100%" x2="0%" y2="0%">
+                          <stop offset="0%" stopColor="#10b981" />
+                          <stop offset="100%" stopColor="#34d399" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="100" cy="100" r="90" fill="url(#glow)" />
+                      <circle cx="100" cy="100" r="70" fill="none" stroke="#e2e8f0" strokeWidth="4" strokeDasharray="10 10" />
+                      
+                      {/* Battery Body */}
+                      <rect x="75" y="60" width="50" height="80" rx="8" fill="white" stroke="#94a3b8" strokeWidth="4" />
+                      <path d="M90 56 L110 56 A4 4 0 0 1 114 60 L86 60 A4 4 0 0 1 90 56 Z" fill="#94a3b8" />
+                      
+                      {/* Battery Juice (Animated) */}
+                      <rect x="81" y="70" width="38" height="64" rx="4" fill="url(#battery)">
+                        <animate attributeName="height" from="10" to="64" dur="2s" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1" />
+                        <animate attributeName="y" from="124" to="70" dur="2s" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1" />
+                      </rect>
+                      
+                      {/* Plus/Energy symbol */}
+                      <path d="M100 90 L100 114 M88 102 L112 102" stroke="white" strokeWidth="4" strokeLinecap="round" opacity="0.9" />
+                      
+                      {/* Orbiting particles */}
+                      <circle cx="100" cy="20" r="6" fill="#3b82f6">
+                        <animateTransform attributeName="transform" type="rotate" from="0 100 100" to="360 100 100" dur="8s" repeatCount="indefinite" />
+                      </circle>
+                      <circle cx="100" cy="180" r="4" fill="#6366f1">
+                        <animateTransform attributeName="transform" type="rotate" from="360 100 100" to="0 100 100" dur="12s" repeatCount="indefinite" />
+                      </circle>
+                    </svg>
+                    <style>{`@keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }`}</style>
+                  </div>
+                  
+                  <h3 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--clinical-slate-800)', marginBottom: '8px' }}>Active Recovery Day</h3>
+                  <p style={{ fontSize: '15px', color: 'var(--clinical-slate-500)', maxWidth: '400px', margin: '0 auto 24px', lineHeight: 1.6 }}>
+                    Muscle growth and joint repair happen while you rest. Take today off from heavy loading to ensure optimal recovery for tomorrow's therapy session.
+                  </p>
+                  
+                  <button 
+                    onClick={() => toggleWorkout(0)} 
+                    style={{
+                      padding: '12px 32px',
+                      borderRadius: '50px',
+                      background: completedWorkouts.includes(0) ? '#10b981' : 'var(--clinical-blue)',
+                      color: 'white',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
+                    }}
+                  >
+                    {completedWorkouts.includes(0) ? <CheckCircle2 size={18} /> : <Activity size={18} />}
+                    {completedWorkouts.includes(0) ? 'Recovery Logged!' : 'Acknowledge Recovery'}
+                  </button>
+                </div>
+              ) : exercises.length > 0 ? (
                 exercises.map((workout, i) => {
                   const isDone = completedWorkouts.includes(i);
                   return (
@@ -652,7 +730,7 @@ export default function UserWorkspace() {
                         >
                           {isDone ? 'Done' : 'Mark Done'}
                         </button>
-                        {!isDone && (
+                        {!isDone && workout.name !== 'Rest & Recovery' && (
                           <button onClick={() => handleProceed(workout)} className="btn-exercise-proceed">
                             Proceed
                           </button>
@@ -953,11 +1031,38 @@ export default function UserWorkspace() {
           <button className="user-btn" onClick={handleLogout}><User size={16} /></button>
         </header>
 
-        {/* PAGE TITLE */}
-        <div className="page-header">
+        {/* PAGE TITLE & DAY SWITCHER */}
+        <div className="page-header" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <h2 className="page-title">
             {activeTab === 'home' ? 'Clinical Dashboard' : activeTab === 'diet' ? 'Nutrition Protocol' : 'Physical Therapy'}
           </h2>
+          
+          {/* Day Switcher UI */}
+          {plan && workoutViewState === 'list' && (
+            <div className="day-switcher" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+              {[1, 2, 3, 4, 5, 6, 7].map(d => (
+                <button 
+                  key={d}
+                  onClick={() => setTodayKey(`day_${d}`)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: '1px solid var(--clinical-blue-border, #bfdbfe)',
+                    background: todayKey === `day_${d}` ? 'var(--clinical-blue, #2563eb)' : '#fff',
+                    color: todayKey === `day_${d}` ? '#fff' : 'var(--clinical-blue, #2563eb)',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease',
+                    boxShadow: todayKey === `day_${d}` ? '0 2px 4px rgba(37,99,235,0.2)' : 'none'
+                  }}
+                >
+                  Day {d}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Dynamic Content Views */}
@@ -1025,7 +1130,7 @@ export default function UserWorkspace() {
               <button onClick={() => setIsDietDetailOpen(false)} className="close-btn"><X size={18} /></button>
             </div>
             <div className="drawer-body custom-scrollbar">
-              {['Breakfast', 'Lunch', 'Dinner'].map((meal) => (
+              {['Breakfast', 'Lunch', 'Snacks', 'Dinner'].map((meal) => (
                 <div 
                   key={meal} 
                   onClick={() => setDietStatus(p => ({...p, [meal.toLowerCase()]: !p[meal.toLowerCase()]}))} 

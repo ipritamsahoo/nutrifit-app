@@ -55,15 +55,11 @@ export default function DoctorDashboard() {
   /* ── Add Patient modal ─────────────────────────────── */
   const [showAddModal, setShowAddModal] = useState(false);
 
-  /* ── AI Prescription (Column C) ────────────────────── */
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [loadingText, setLoadingText] = useState('');
-  const [toast, setToast] = useState(false);
-  const [prescription, setPrescription] = useState({
-    goal: 'Weight Loss - 1500 Cal',
-    detox: '', breakfast: '', lunch: '', snack: '', dinner: '',
-    exercises: []
-  });
+  /* ── Plan View modal ───────────────────────────────── */
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [patientPlan, setPatientPlan] = useState(null);
+  const [planLoading, setPlanLoading] = useState(false);
+
 
   /* ── Real-time Patient Listener ────────────────────── */
   useEffect(() => {
@@ -107,107 +103,36 @@ export default function DoctorDashboard() {
     return () => unsubscribe();
   }, [currentUser]);
 
-  useEffect(() => {
-    if (selectedPatient?.goal) setPrescription(p => ({ ...p, goal: selectedPatient.goal }));
-  }, [selectedPatient]);
-
-
   /* ── View Logs ─────────────────────────────────────── */
   async function handleViewLogs() {
     if (!selectedPatient) return;
     setShowLogsModal(true);
     try {
-      const q = query(collection(db, 'logs'), where('uid', '==', selectedPatient.uid), orderBy('date', 'desc'), limit(20));
+      const q = query(collection(db, 'logs'), where('uid', '==', selectedPatient.uid || selectedPatient.id), orderBy('date', 'desc'), limit(20));
       const snap = await getDocs(q);
       setPatientLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch { setPatientLogs([]); }
   }
 
-  /* ── AI Generate ───────────────────────────────────── */
-  async function handleGenerateAI() {
+  /* ── View Plan ─────────────────────────────────────── */
+  async function handleViewPlan() {
     if (!selectedPatient) return;
-    setIsGenerating(true);
-    setLoadingText('Analyzing Patient Data...');
-    setTimeout(() => setLoadingText('Structuring Workouts...'), 600);
-    setTimeout(() => setLoadingText('Optimizing Nutrition...'), 1200);
+    setShowPlanModal(true);
+    setPlanLoading(true);
     try {
-      const res = await fetch(`${API_URL}/generate-plan`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uid: selectedPatient.uid, age: 25, weight: 70, height: 170,
-          goal: prescription.goal,
-          medical_conditions: selectedPatient.condition || '',
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const fullPlan = data.plan || {};
-        
-        // Gemini returns a 7-day structure. We extract Day 1 for the initial prescription.
-        const d1Diet = fullPlan.diet_plan?.day_1 || {};
-        const d1Workout = fullPlan.workout_plan?.day_1 || {};
-
-        setPrescription(p => ({
-          ...p,
-          detox: d1Diet.detox 
-            ? (typeof d1Diet.detox === 'object' ? `${d1Diet.detox.meal}${d1Diet.detox.calories ? ` (${d1Diet.detox.calories} cal)` : ''}` : d1Diet.detox)
-            : '',
-          breakfast: d1Diet.breakfast
-            ? (typeof d1Diet.breakfast === 'object' ? `${d1Diet.breakfast.meal}${d1Diet.breakfast.calories ? ` (${d1Diet.breakfast.calories} cal)` : ''}` : d1Diet.breakfast)
-            : '',
-          lunch: d1Diet.lunch
-            ? (typeof d1Diet.lunch === 'object' ? `${d1Diet.lunch.meal}${d1Diet.lunch.calories ? ` (${d1Diet.lunch.calories} cal)` : ''}` : d1Diet.lunch)
-            : '',
-          snack: d1Diet.snacks
-            ? (typeof d1Diet.snacks === 'object' ? `${d1Diet.snacks.meal}${d1Diet.snacks.calories ? ` (${d1Diet.snacks.calories} cal)` : ''}` : d1Diet.snacks)
-            : '',
-          dinner: d1Diet.dinner
-            ? (typeof d1Diet.dinner === 'object' ? `${d1Diet.dinner.meal}${d1Diet.dinner.calories ? ` (${d1Diet.dinner.calories} cal)` : ''}` : d1Diet.dinner)
-            : '',
-          exercises: (d1Workout.exercises || []).map(ex => ({
-            name: ex.name, sets: ex.sets || 3, reps: ex.reps || 10
-          })),
-        }));
-      } else { fallbackAI(); }
-    } catch { fallbackAI(); }
-    finally { setIsGenerating(false); setLoadingText(''); }
-  }
-
-  function fallbackAI() {
-    setPrescription(p => ({
-      ...p,
-      detox: 'Warm lemon water with cinnamon.',
-      breakfast: '2 Scrambled eggs, 1 slice whole-wheat toast, 1/2 avocado.',
-      lunch: 'Grilled chicken (150g), quinoa (1/2 cup), steamed broccoli.',
-      snack: 'Greek yogurt (100g) with a handful of almonds.',
-      dinner: 'Baked salmon (120g) with asparagus and mixed green salad.',
-      exercises: [
-        { name: 'Bodyweight Squats', sets: 3, reps: 15 },
-        { name: 'Push-ups (Modified)', sets: 3, reps: 10 },
-        { name: 'Plank', sets: 3, reps: '45 sec' },
-      ],
-    }));
-  }
-
-  /* ── Save & Send ───────────────────────────────────── */
-  async function handleSaveAndSend() {
-    if (!selectedPatient) return;
-    try {
-      await fetch(`${API_URL}/assign-prescription`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          doctor_uid: currentUser.uid, patient_uid: selectedPatient.uid,
-          diet_json: {
-            detox: prescription.detox, breakfast: prescription.breakfast,
-            lunch: prescription.lunch, snack: prescription.snack, dinner: prescription.dinner,
-          },
-          workout_json: { exercises: prescription.exercises },
-          notes: `Goal: ${prescription.goal}`,
-        }),
-      });
-    } catch (err) { console.error('Send error:', err); }
-    setToast(true);
-    setTimeout(() => setToast(false), 3000);
+      const q = query(collection(db, 'plans'), where('uid', '==', selectedPatient.uid || selectedPatient.id));
+      const snap = await getDocs(q);
+      const plans = snap.docs.map(d => d.data());
+      const approved = plans
+        .filter(p => !p.status || p.status === 'approved') // Include missing status for legacy safety
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      setPatientPlan(approved[0] || null);
+    } catch (e) {
+      console.error(e);
+      setPatientPlan(null);
+    } finally {
+      setPlanLoading(false);
+    }
   }
 
   function handleLogout() { logout(); navigate('/login'); }
@@ -300,7 +225,10 @@ export default function DoctorDashboard() {
                     )}
                   </div>
                 </div>
-                <button className="col-b-logs-btn" onClick={handleViewLogs}>View Logs</button>
+                <div className="col-b-header-actions">
+                  <button className="col-b-logs-btn alt" onClick={handleViewPlan}><ClipboardList size={16}/> View Plan</button>
+                  <button className="col-b-logs-btn" onClick={handleViewLogs}>View Logs</button>
+                </div>
               </div>
             </div>
 
@@ -376,141 +304,7 @@ export default function DoctorDashboard() {
         )}
       </div>
 
-      {/* ═══ COLUMN C — AI Co-Pilot ═══ */}
-      <div className="col-c">
-        <div className="col-c-header">
-          <div className="col-c-header-row">
-            <Sparkles size={18} className="col-c-header-icon" />
-            <h2 className="col-c-header-title">AI Co-Pilot</h2>
-          </div>
-          <p className="col-c-header-sub">Auto-generate optimized plans based on patient data.</p>
-        </div>
 
-        <div className="col-c-content cmd-scroll">
-          {/* Goal Selector */}
-          <div>
-            <label className="goal-label">Patient Goal</label>
-            <div className="goal-select-wrap">
-              <select className="goal-select" value={prescription.goal}
-                onChange={e => setPrescription({ ...prescription, goal: e.target.value })}>
-                <option value="Weight Loss - 1500 Cal">Weight Loss - 1500 Cal</option>
-                <option value="Weight Loss - 1200 Cal">Weight Loss - 1200 Cal</option>
-                <option value="Muscle Gain - 3000 Cal">Muscle Gain - 3000 Cal</option>
-                <option value="Rehab & Mobility">Rehab &amp; Mobility</option>
-                <option value="Maintenance">Maintenance</option>
-              </select>
-              <ChevronDown className="goal-chevron" size={18} />
-            </div>
-          </div>
-
-          {/* AI Generate Button */}
-          <button className={`ai-gen-btn ${isGenerating ? 'loading' : 'ready'}`}
-            onClick={handleGenerateAI} disabled={isGenerating || !selectedPatient}>
-            {isGenerating && <div className="pulse-bg" />}
-            {isGenerating ? (
-              <><div className="spinner" /><span>{loadingText}</span></>
-            ) : (
-              <><Sparkles size={18} /> Generate AI Draft</>
-            )}
-          </button>
-
-          <div className="col-c-divider" />
-
-          {/* Meal Inputs */}
-          <div>
-            <div className="sec-header">
-              <h3 className="sec-title">
-                Nutrition Plan
-                {prescription.breakfast && <CheckCircle size={14} className="sec-check" />}
-              </h3>
-            </div>
-            {[
-              { id: 'detox', label: 'Morning Detox / Early Snack' },
-              { id: 'breakfast', label: 'Breakfast' },
-              { id: 'lunch', label: 'Lunch' },
-              { id: 'snack', label: 'Evening Snack' },
-              { id: 'dinner', label: 'Dinner' },
-            ].map(meal => (
-              <div className="meal-group" key={meal.id}>
-                <label className="meal-label">{meal.label}</label>
-                <textarea className={`meal-textarea ${prescription[meal.id] ? 'filled' : ''}`}
-                  rows={2} placeholder={`Enter ${meal.label.toLowerCase()}...`}
-                  value={prescription[meal.id]}
-                  onChange={e => setPrescription({ ...prescription, [meal.id]: e.target.value })} />
-              </div>
-            ))}
-          </div>
-
-          <div className="col-c-divider" />
-
-          {/* Exercise Assignor */}
-          <div>
-            <div className="sec-header" style={{ marginBottom: 16 }}>
-              <h3 className="sec-title">
-                Workout Routine
-                {prescription.exercises.length > 0 && <CheckCircle size={14} className="sec-check" />}
-              </h3>
-              <button className="add-manual-btn"
-                onClick={() => setPrescription({ ...prescription, exercises: [...prescription.exercises, { name: '', sets: 3, reps: 10 }] })}>
-                <Plus size={14} /> Add Manual
-              </button>
-            </div>
-
-            {prescription.exercises.length === 0 ? (
-              <div className="ex-empty">Click 'Generate AI Draft' or add exercises manually.</div>
-            ) : (
-              <div className="ex-list">
-                {prescription.exercises.map((ex, idx) => (
-                  <div className="ex-row" key={idx}>
-                    <input className="ex-name-input" type="text" value={ex.name}
-                      onChange={e => {
-                        const n = [...prescription.exercises]; n[idx].name = e.target.value;
-                        setPrescription({ ...prescription, exercises: n });
-                      }} />
-                    <div className="ex-nums">
-                      <div className="ex-num-col">
-                        <span className="ex-num-label">Sets</span>
-                        <input className="ex-num-input" type="text" value={ex.sets}
-                          onChange={e => {
-                            const n = [...prescription.exercises]; n[idx].sets = e.target.value;
-                            setPrescription({ ...prescription, exercises: n });
-                          }} />
-                      </div>
-                      <div className="ex-num-col">
-                        <span className="ex-num-label">Reps</span>
-                        <input className="ex-num-input wide" type="text" value={ex.reps}
-                          onChange={e => {
-                            const n = [...prescription.exercises]; n[idx].reps = e.target.value;
-                            setPrescription({ ...prescription, exercises: n });
-                          }} />
-                      </div>
-                    </div>
-                    <button className="ex-remove-btn"
-                      onClick={() => setPrescription({ ...prescription, exercises: prescription.exercises.filter((_, i) => i !== idx) })}>
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ height: 64 }} />
-        </div>
-
-        {/* Footer */}
-        <div className="col-c-footer">
-          {toast && (
-            <div className="cmd-toast">
-              <Check size={16} className="cmd-toast-icon" />
-              Prescription synced successfully!
-            </div>
-          )}
-          <button className="approve-btn" onClick={handleSaveAndSend} disabled={!selectedPatient}>
-            Approve & Send to Patient <Send size={16} />
-          </button>
-        </div>
-      </div>
 
       {/* ═══ ENROLL & PRESCRIBE MODAL ═══ */}
       {showAddModal && (
@@ -546,6 +340,128 @@ export default function DoctorDashboard() {
                 </tbody>
               </table>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ PLAN VIEW MODAL ═══ */}
+      {showPlanModal && selectedPatient && (
+        <div className="cmd-modal-overlay" onClick={() => setShowPlanModal(false)}>
+          <div className="cmd-modal wide" onClick={e => e.stopPropagation()}>
+            <div className="cmd-modal-header">
+              <h2 className="cmd-modal-title"><ClipboardList size={20} className="mr-2" /> Active Plan — {selectedPatient.name}</h2>
+              <button className="cmd-modal-close" onClick={() => setShowPlanModal(false)}><X size={20} /></button>
+            </div>
+            
+            <div className="cmd-modal-body cmd-scroll plan-view-container">
+              {planLoading ? (
+                <div className="p-card-status-dot online" style={{width: 20, height: 20, margin: '2rem auto'}} />
+              ) : patientPlan ? (
+                <div className="plan-7day-grid">
+                  {[1, 2, 3, 4, 5, 6, 7].map(day => {
+                    // Extract Diet (Handles V1 arrays, V1 objects, and V2 Array of objects)
+                    let dietMeals = [];
+                    const dData = patientPlan.diet_json;
+                    if (dData) {
+                      if (Array.isArray(dData) || (dData[0] && dData[0].meals)) {
+                        // V2 Schema (`[ { day: 1, meals: { breakfast: {name, cal} } } ]`)
+                        const v2Day = dData[day - 1];
+                        if (v2Day && v2Day.meals) {
+                          Object.entries(v2Day.meals).forEach(([mType, mData]) => {
+                            if (mData && mData.name) {
+                              dietMeals.push(`${mType}:${mData.name}|${mData.cal || 0}`);
+                            }
+                          });
+                        }
+                      } else if (dData[`day_${day}`]) {
+                        // V1 Schema
+                        const dX = dData[`day_${day}`];
+                        if (Array.isArray(dX)) {
+                          dietMeals = dX; // ["breakfast:Oats|300"]
+                        } else if (typeof dX === 'object') {
+                          // V1 Manual Assignment (`{ breakfast: "Oats (300 cal)" }`)
+                          Object.entries(dX).forEach(([mType, val]) => {
+                            if (val) {
+                              // If format already has calories in parentheses, omit trailing |0
+                              const isFormatted = val.includes('(') && val.includes('cal');
+                              dietMeals.push(`${mType}:${val}|${isFormatted ? '' : '0'}`);
+                            }
+                          });
+                        }
+                      }
+                    }
+
+                    // Extract Workout
+                    let workoutChar = patientPlan.workout_json?.sched?.[day - 1];
+                    let workoutDetails = patientPlan.workout_json?.tpl?.[workoutChar];
+
+                    // Fallback to V1 Manual Workflow Assignment (`workout_json.day_X.exercises`)
+                    if (!workoutChar && patientPlan.workout_json?.[`day_${day}`]) {
+                       workoutChar = 'V1';
+                       const exList = patientPlan.workout_json[`day_${day}`].exercises || [];
+                       workoutDetails = { ex: exList.map(ex => `${ex.name}|${ex.sets}x${ex.reps}`) };
+                    }
+                    
+                    return (
+                      <div key={day} className="plan-day-card">
+                        <div className="pdc-header">Day {day}</div>
+                        <div className="pdc-body">
+                          
+                          <div className="pdc-section diet">
+                            <h4 className="pdc-section-title"><Sparkles size={12}/> Diet</h4>
+                            {dietMeals.length > 0 ? (
+                              <ul className="pdc-list">
+                                {dietMeals.map((meal, idx) => {
+                                  // Format: "breakfast:Oats|300"
+                                  const [type, itemStr] = meal.split(':');
+                                  const [itemName, cal] = (itemStr || meal).split('|');
+                                  return (
+                                    <li key={idx}>
+                                      <span className="pdc-type">{type}</span>
+                                      <span className="pdc-item">{itemName}</span>
+                                      <span className="pdc-cal">{cal} cals</span>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            ) : <p className="pdc-empty">No diet tracked</p>}
+                          </div>
+
+                          <div className="pdc-section workout">
+                            <h4 className="pdc-section-title"><Activity size={12}/> Workout</h4>
+                            {workoutDetails?.ex ? (
+                              <ul className="pdc-list">
+                                {workoutDetails.ex.map((ex, idx) => {
+                                  // Format: "Exercise|3x12|r60"
+                                  const parts = ex.split('|');
+                                  const exName = parts[0];
+                                  const exSets = parts[1] || "";
+                                  return (
+                                    <li key={idx}>
+                                      <span className="pdc-item">{exName}</span>
+                                      <span className="pdc-badge">{exSets}</span>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            ) : workoutChar === 'M' ? (
+                              <p className="pdc-empty">Mobility / Rest</p>
+                            ) : <p className="pdc-empty">Rest Day</p>}
+                          </div>
+
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="cmd-empty-state">
+                  <AlertTriangle size={36} color="var(--text-disabled)" />
+                  <h3>No Active Plan Found</h3>
+                  <p>This patient currently does not have an approved AI or Deterministic plan.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

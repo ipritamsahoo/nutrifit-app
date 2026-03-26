@@ -76,7 +76,7 @@ def _normalize_exercise_name(name: str) -> str:
     parts = [part for part in name.split() if part]
     no_strip = {"press", "dips", "abs", "lats", "bis", "tris", "hips", "cross"}
     if parts and parts[-1] not in no_strip and parts[-1].endswith("s") and len(parts[-1]) > 3:
-        parts[-1] = parts[-1][:-1]
+        parts[-1] = parts[-1][:-1]  # type: ignore
     return " ".join(parts)
 
 
@@ -206,7 +206,14 @@ def sanitize_plan_workouts(plan: dict) -> dict:
             if not isinstance(exercise, dict):
                 continue
 
-            canonical_name = coerce_valid_exercise_name(exercise.get("name", ""))
+            name = exercise.get("name", "")
+            
+            # Explicitly allow Rest & Recovery to bypass MuscleWiki sanitization so it shows on UI
+            if name == "Rest & Recovery":
+                sanitized_exercises.append(exercise)
+                continue
+                
+            canonical_name = coerce_valid_exercise_name(name)
             if not canonical_name:
                 continue
 

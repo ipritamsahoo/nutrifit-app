@@ -18,7 +18,7 @@ import Webcam from 'react-webcam';
 import { createPoseDetector } from './utils/poseUtils';
 import { clearCanvas, drawKeypoints, drawConnections } from './utils/drawUtils';
 import { calculateAngle, checkGenericRep } from './utils/angleUtils';
-import { EXERCISE_MAPPINGS, getExerciseConfig } from './utils/exerciseConfigs';
+import { ALL_EXERCISE_NAMES, getExerciseConfig } from './utils/exerciseConfigs';
 import { createLandmarkFilters, filterLandmarks, predictLandmarks, lerpLandmarks } from './utils/cvKalmanFilter';
 import { speak, stopSpeaking } from './utils/speechUtils';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,12 +31,13 @@ const REQUESTED_WIDTH = 480;
 const REQUESTED_HEIGHT = 360;
 const LERP_SPEED = 0.40;  // Balance: smooth but responsive to body movement
 
-const EXERCISES = Object.keys(EXERCISE_MAPPINGS).map(name => {
+const EXERCISES = ALL_EXERCISE_NAMES.map(name => {
   const cfg = getExerciseConfig(name);
   let icon = '🏋️';
   if (cfg.category === 'lower_body') icon = '🦵';
   else if (cfg.category === 'upper_body') icon = '💪';
   else if (cfg.category === 'core') icon = '🔥';
+
 
   return { id: name, name: name, icon };
 }).sort((a, b) => a.name.localeCompare(b.name));
@@ -80,8 +81,15 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
     // If embedded with specific exercise, use that
     if (exerciseNameProp && EXERCISES.some(e => e.id === exerciseNameProp)) return exerciseNameProp;
     const urlEx = searchParams.get('exercise');
-    if (urlEx && EXERCISES.some(e => e.id === urlEx)) return urlEx;
-    return EXERCISES.find(e => e.name === 'Barbell Forward Lunge')?.id || EXERCISES[0].id;
+    if (urlEx) {
+      // Exact match (full key like "Biceps - Dumbbell Curl")
+      const exact = EXERCISES.find(e => e.id === urlEx);
+      if (exact) return exact.id;
+      // Suffix match (short name like "Dumbbell Curl" → find "Biceps - Dumbbell Curl")
+      const suffix = EXERCISES.find(e => e.id.endsWith(' - ' + urlEx));
+      if (suffix) return suffix.id;
+    }
+    return EXERCISES.find(e => e.name.includes('Barbell Forward Lunge'))?.id || EXERCISES[0].id;
   });
   const [repsDisplay, setRepsDisplay] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -230,22 +238,73 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
 
           const landmarks = drawLandmarks;
           const config = getExerciseConfig(exerciseType) || getExerciseConfig('default');
-          const [j1, j2, j3] = config.joints;
+          const exerciseAngles = config.angles || [];
 
-          let p1 = landmarks[j1];
-          let p2 = landmarks[j2];
-          let p3 = landmarks[j3];
+          // ── MULTI-JOINT, DUAL-SIDE TRACKING ──
+          // For each angle definition, compute left+right side, average them
+          const computedAngles = []; // { value, name, pxL, pxR }
 
-          if (p1 && p2 && p3 && p1.visibility > 0.5 && p2.visibility > 0.5 && p3.visibility > 0.5) {
-            const px1 = { x: p1.x * canvas.width, y: p1.y * canvas.height };
-            const px2 = { x: p2.x * canvas.width, y: p2.y * canvas.height };
-            const px3 = { x: p3.x * canvas.width, y: p3.y * canvas.height };
+          for (const angleDef of exerciseAngles) {
+            const [j1, j2, j3] = angleDef.joints;
 
-            const angle = calculateAngle(px1, px2, px3);
-            currentAngleRef.current = angle;
+            // Left side
+            const pL1 = landmarks[j1], pL2 = landmarks[j2], pL3 = landmarks[j3];
+            const leftVis = pL1 && pL2 && pL3 &&
+              pL1.visibility > 0.5 && pL2.visibility > 0.5 && pL3.visibility > 0.5;
 
-            const res = checkGenericRep(angle, workoutStateRef.current, config);
+            // Right side (left + 1)
+            const pR1 = landmarks[j1 + 1], pR2 = landmarks[j2 + 1], pR3 = landmarks[j3 + 1];
+            const rightVis = pR1 && pR2 && pR3 &&
+              pR1.visibility > 0.5 && pR2.visibility > 0.5 && pR3.visibility > 0.5;
 
+            let leftAngle = null, rightAngle = null;
+            let pxL = null, pxR = null;
+
+            if (leftVis) {
+              pxL = { x: pL2.x * canvas.width, y: pL2.y * canvas.height };
+              leftAngle = calculateAngle(
+                { x: pL1.x * canvas.width, y: pL1.y * canvas.height },
+                pxL,
+                { x: pL3.x * canvas.width, y: pL3.y * canvas.height }
+              );
+            }
+            if (rightVis) {
+              pxR = { x: pR2.x * canvas.width, y: pR2.y * canvas.height };
+              rightAngle = calculateAngle(
+                { x: pR1.x * canvas.width, y: pR1.y * canvas.height },
+                pxR,
+                { x: pR3.x * canvas.width, y: pR3.y * canvas.height }
+              );
+            }
+
+            if (leftVis || rightVis) {
+              const avgAngle = (leftAngle !== null && rightAngle !== null)
+                ? (leftAngle + rightAngle) / 2
+                : (leftAngle !== null ? leftAngle : rightAngle);
+
+              computedAngles.push({
+                value: avgAngle,
+                name: angleDef.name,
+                upAngle: angleDef.upAngle,
+                downAngle: angleDef.downAngle,
+                leftAngle, rightAngle, pxL, pxR
+              });
+            }
+          }
+
+          // Rep tracking uses PRIMARY angle (index 0)
+          if (computedAngles.length > 0) {
+            const primary = computedAngles[0];
+            currentAngleRef.current = primary.value;
+
+            // Build config for checkGenericRep (primary angle only)
+            const repConfig = {
+              upThreshold: primary.upAngle,
+              downThreshold: primary.downAngle,
+              startPosition: config.startPosition,
+            };
+
+            const res = checkGenericRep(primary.value, workoutStateRef.current, repConfig);
             workoutStateRef.current = res.newState;
 
             if (res.repCompleted) {
@@ -254,37 +313,42 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
               if (onRepUpdate) onRepUpdate(repsRef.current);
             }
 
-            // Track successful reps (where target depth was hit)
             if (res.isCorrect && res.repCompleted) {
               successRepsRef.current += 1;
             }
 
-            // Update form status for skeleton coloring
+            // Form status
             if (res.isCorrect) {
               currentStatus = 'success';
             } else if (res.progress > 15) {
               currentStatus = 'inProgress';
             }
 
-            // Update feedback (throttled to avoid re-renders every frame)
             if (res.feedback && res.feedback !== lastFeedbackRef.current) {
               lastFeedbackRef.current = res.feedback;
               setFeedbackMsg(res.feedback);
               setFormStatus(currentStatus);
-
-              // Voice announcement (speaks only when message changes)
               speak(res.feedback.replace(/[✅🔥]/g, ''), isMuted);
             }
 
-            // Update progress (throttled)
             if (Math.random() < 0.2) {
               setRepProgress(Math.round(res.progress));
             }
 
-            // Draw angle near joint
-            ctx.fillStyle = 'white';
-            ctx.font = '28px Arial';
-            ctx.fillText(Math.round(angle) + '°', px2.x + 20, px2.y);
+            // Draw ALL angle labels on BOTH sides
+            ctx.font = '22px Arial';
+            for (const a of computedAngles) {
+              const label = a.name ? `${a.name}: ` : '';
+              if (a.leftAngle !== null && a.pxL) {
+                ctx.fillStyle = currentStatus === 'success' ? '#22c55e' : '#ffffff';
+                ctx.fillText(label + Math.round(a.leftAngle) + '°', a.pxL.x + 15, a.pxL.y);
+              }
+              if (a.rightAngle !== null && a.pxR) {
+                ctx.fillStyle = currentStatus === 'success' ? '#22c55e' : '#ffffff';
+                const text = label + Math.round(a.rightAngle) + '°';
+                ctx.fillText(text, a.pxR.x - ctx.measureText(text).width - 15, a.pxR.y);
+              }
+            }
           }
 
           // Draw skeleton with status color

@@ -1,5 +1,5 @@
 """
-gemini_service.py
+ai_service.py
 =================
 Compact workout template generation for the hackathon demo.
 """
@@ -22,7 +22,7 @@ _MODEL_NAME = "google/gemma-3n-e4b-it"
 _API_KEY = os.getenv("NVIDIA_API_KEY")
 
 if not _API_KEY:
-    print("[Gemini] WARNING: NVIDIA_API_KEY not found in environment!")
+    print("[AI Service] WARNING: NVIDIA_API_KEY not found in environment!")
     _API_KEY = "nvapi-missing"
 
 client = OpenAI(

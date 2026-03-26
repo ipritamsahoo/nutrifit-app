@@ -1,46 +1,57 @@
 /**
  * drawUtils.js
  * =============
- * Pure canvas-drawing helpers for pose landmarks and skeleton connections.
- * No React dependency – works with any CanvasRenderingContext2D.
- *
- * Enhanced with:
- *  - Dynamic skeleton color based on form status
- *  - Smoother rendering with alpha blending
+ * Exact KinesteX-style custom skeleton tracking renderer.
+ * Features hollow 'tapered capsules' for bones (perfectly rounded ends),
+ * thin crisp borders, precise gaps at joints, and solid keypoint circles.
  */
 
-import { POSE_CONNECTIONS } from './poseUtils';
-
-/* ── Colour palette ─────────────────────────────────────────────── */
-const COLOR_LEFT   = '#ff7f00'; // Orange for person's left side
-const COLOR_RIGHT  = '#00d4ff'; // Cyan for person's right side
-const COLOR_CENTER = '#ffffff'; // White for center/fallback
-const KEYPOINT_BORDER  = '#ffffff';
-const KEYPOINT_RADIUS  = 4;
-const KEYPOINT_BORDER_WIDTH = 1;
-const LINE_WIDTH       = 3;
-
-/* ── Status colors for skeleton ─────────────────────────────────── */
+/* ── Status colors for skeleton (KinesteX Neon Style) ───────────── */
 const STATUS_COLORS = {
-  idle:        '#ffffff',   // White – neutral
-  inProgress:  '#fbbf24',   // Amber/Yellow – working
-  success:     '#22c55e',   // Green – target reached
+  idle:        '#39FF14',   // Neon Green (Matches the image)
+  inProgress:  '#FFD700',   // Vivid Gold/Yellow – Rep in progress
+  success:     '#39FF14',   // Neon Green + heavier glow for success
 };
 
-/* ── Visibility threshold ───────────────────────────────────────── */
-const MIN_VISIBILITY = 0.25;  // Lower to keep side-view landmarks visible
+const MIN_VISIBILITY = 0.25;
 
-/**
- * Helper to determine landmark color based on its index
- */
-function getLandmarkColor(index) {
-  if (index === 0) return COLOR_CENTER;
-  if ([1, 2, 3, 7, 9].includes(index)) return COLOR_LEFT;
-  if ([4, 5, 6, 8, 10].includes(index)) return COLOR_RIGHT;
-  if (index >= 11 && index % 2 !== 0) return COLOR_LEFT;
-  if (index >= 12 && index % 2 === 0) return COLOR_RIGHT;
-  return COLOR_CENTER;
-}
+// Defined standard widths (radii) for the custom drawn bones
+// Adjusted to be much thinner ('soru') as requested, except chest/waist as per new feedback
+const CUSTOM_BONES = [
+  // Torso
+  { joints: [11, 12], w1: 5,  w2: 5 },  // Shoulders (chest bar - thicker)
+  { joints: [23, 24], w1: 5,  w2: 5 },  // Hips (waist bar - thicker)
+  { joints: [11, 23], w1: 7,  w2: 4 },  // Left Torso side
+  { joints: [12, 24], w1: 7,  w2: 4 },  // Right Torso side
+  
+  // Arms
+  { joints: [11, 13], w1: 7,  w2: 4 },  // Left Upper Arm
+  { joints: [13, 15], w1: 4,  w2: 2.5 },// Left Lower Arm
+  { joints: [12, 14], w1: 7,  w2: 4 },  // Right Upper Arm
+  { joints: [14, 16], w1: 4,  w2: 2.5 },// Right Lower Arm
+  
+  // Legs
+  { joints: [23, 25], w1: 9,  w2: 5 },  // Left Upper Leg
+  { joints: [25, 27], w1: 5,  w2: 3 },  // Left Lower Leg
+  { joints: [24, 26], w1: 9,  w2: 5 },  // Right Upper Leg
+  { joints: [26, 28], w1: 5,  w2: 3 },  // Right Lower Leg
+
+  // Hands (Thin lines/polygons)
+  { joints: [15, 17], w1: 1.5, w2: 1.5 },
+  { joints: [15, 19], w1: 1.5, w2: 1.5 },
+  { joints: [15, 21], w1: 1.5, w2: 1.5 },
+  { joints: [16, 18], w1: 1.5, w2: 1.5 },
+  { joints: [16, 20], w1: 1.5, w2: 1.5 },
+  { joints: [16, 22], w1: 1.5, w2: 1.5 },
+
+  // Feet (Thin lines/polygons)
+  { joints: [27, 29], w1: 2, w2: 1.5 },
+  { joints: [29, 31], w1: 1.5, w2: 1 },
+  { joints: [31, 27], w1: 1.5, w2: 1.5 },
+  { joints: [28, 30], w1: 2, w2: 1.5 },
+  { joints: [30, 32], w1: 1.5, w2: 1 },
+  { joints: [32, 28], w1: 1.5, w2: 1.5 },
+];
 
 /**
  * clearCanvas – wipe the canvas for the next frame.
@@ -50,44 +61,92 @@ export function clearCanvas(ctx, width, height) {
 }
 
 /**
- * drawKeypoints – draw a small filled circle at each landmark.
- *
- * @param {CanvasRenderingContext2D} ctx
- * @param {Array} landmarks  – array of 33 { x, y, z, visibility } objects
- * @param {number} width     – canvas width in pixels
- * @param {number} height    – canvas height in pixels
- * @param {string} status    – 'idle' | 'inProgress' | 'success'
+ * Draw a beautifully rounded "tapered capsule" between two joints
+ * This perfectly mimics the pill-like / capsule shapes seen in the reference image.
  */
-export function drawKeypoints(ctx, landmarks, width, height, status = 'idle') {
-  ctx.lineWidth = KEYPOINT_BORDER_WIDTH;
-  ctx.strokeStyle = KEYPOINT_BORDER;
+function drawBone(ctx, p1, p2, w1, w2, width, height, themeColor, isGlow) {
+  if (p1.visibility < MIN_VISIBILITY || p2.visibility < MIN_VISIBILITY) return;
 
-  const glowColor = STATUS_COLORS[status] || STATUS_COLORS.idle;
+  const x1 = p1.x * width;
+  const y1 = p1.y * height;
+  const x2 = p2.x * width;
+  const y2 = p2.y * height;
 
-  for (let index = 0; index < landmarks.length; index++) {
-    const lm = landmarks[index];
-    if (lm.visibility < MIN_VISIBILITY) continue;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  
+  const GAP = 15; // Gap between keypoint center and bone end
+  if (len <= GAP * 2) return; // Bone too short to draw realistically
 
-    const x = lm.x * width;
-    const y = lm.y * height;
+  // Normalized direction vector
+  const ux = dx / len;
+  const uy = dy / len;
 
-    ctx.globalAlpha = Math.max(0.5, lm.visibility);
+  // New start and end points shifted by the precise GAP
+  const startX = x1 + ux * GAP;
+  const startY = y1 + uy * GAP;
+  const endX = x2 - ux * GAP;
+  const endY = y2 - uy * GAP;
 
-    // Glow effect for success state
-    if (status === 'success') {
-      ctx.shadowColor = glowColor;
-      ctx.shadowBlur = 10;
-    } else {
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
+  const boneLen = len - 2 * GAP;
+  let R = w1; // Radius of start cap
+  let r = w2; // Radius of end cap
+
+  // Safety net to prevent Math.asin NaN if R - r > boneLen
+  if (Math.abs(R - r) >= boneLen) {
+    if (R > r) R = r + boneLen - 0.1;
+    else r = R + boneLen - 0.1; 
+  }
+
+  // Calculate the tangent wrapper (convex hull of two circles)
+  const angle = Math.atan2(endY - startY, endX - startX);
+  const alpha = Math.asin((R - r) / boneLen);
+
+  const a1 = angle + Math.PI / 2 + alpha;
+  const a2 = angle - Math.PI / 2 - alpha;
+
+  ctx.beginPath();
+  // We draw the arc around the start point (covers the back)
+  // going from a1 to a2 clockwise.
+  ctx.arc(startX, startY, R, a1, a2, false);
+  // We draw the arc around the end point (covers the front)
+  // going from a2 to a1 clockwise.
+  ctx.arc(endX, endY, r, a2, a1, false);
+  ctx.closePath();
+
+  // Thin, crisp border
+  ctx.strokeStyle = themeColor;
+  ctx.lineWidth = 1.5;
+
+  if (isGlow) {
+    ctx.shadowColor = themeColor;
+    ctx.shadowBlur = 8;
+  } else {
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+  }
+
+  const alphaOpacity = Math.max(0.4, Math.min(p1.visibility, p2.visibility));
+  ctx.globalAlpha = alphaOpacity;
+  
+  // Stroke ONLY
+  ctx.stroke();
+}
+
+/**
+ * drawConnections – draws the custom capsule bones
+ */
+export function drawConnections(ctx, landmarks, width, height, status = 'idle') {
+  const themeColor = STATUS_COLORS[status] || STATUS_COLORS.idle;
+  const isSuccess = status === 'success';
+
+  for (const bone of CUSTOM_BONES) {
+    const p1 = landmarks[bone.joints[0]];
+    const p2 = landmarks[bone.joints[1]];
+    if (p1 && p2) {
+      drawBone(ctx, p1, p2, bone.w1, bone.w2, width, height, themeColor, isSuccess);
     }
-
-    ctx.fillStyle = status === 'idle' ? getLandmarkColor(index) : glowColor;
-
-    ctx.beginPath();
-    ctx.arc(x, y, KEYPOINT_RADIUS, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.stroke();
   }
 
   ctx.globalAlpha = 1;
@@ -96,44 +155,43 @@ export function drawKeypoints(ctx, landmarks, width, height, status = 'idle') {
 }
 
 /**
- * drawConnections – draw lines between connected joints.
- *
- * @param {CanvasRenderingContext2D} ctx
- * @param {Array} landmarks
- * @param {number} width
- * @param {number} height
- * @param {string} status – 'idle' | 'inProgress' | 'success'
+ * drawKeypoints – draws solid dots on joints
  */
-export function drawConnections(ctx, landmarks, width, height, status = 'idle') {
-  const connectionColor = STATUS_COLORS[status] || STATUS_COLORS.idle;
-  ctx.strokeStyle = connectionColor;
-  ctx.lineWidth   = status === 'success' ? LINE_WIDTH + 1 : LINE_WIDTH;
-  ctx.lineCap     = 'round';
+export function drawKeypoints(ctx, landmarks, width, height, status = 'idle') {
+  const themeColor = STATUS_COLORS[status] || STATUS_COLORS.idle;
 
-  // Glow for success
-  if (status === 'success') {
-    ctx.shadowColor = connectionColor;
-    ctx.shadowBlur = 8;
-  } else {
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-  }
+  ctx.fillStyle = themeColor;
 
-  for (const [i, j] of POSE_CONNECTIONS) {
+  for (let index = 11; index < landmarks.length; index++) { // Start at 11 to skip face
+    const lm = landmarks[index];
+    if (lm.visibility < MIN_VISIBILITY) continue;
 
-    const a = landmarks[i];
-    const b = landmarks[j];
-    if (a.visibility < MIN_VISIBILITY || b.visibility < MIN_VISIBILITY) continue;
+    const x = lm.x * width;
+    const y = lm.y * height;
 
-    ctx.globalAlpha = Math.max(0.4, Math.min(a.visibility, b.visibility));
+    // Small precise circles
+    let radius = 6; 
+    if ([29, 30, 31, 32, 17, 18, 19, 20, 21, 22].includes(index)) {
+      radius = 4; // hands/feet smaller
+    }
+
+    ctx.globalAlpha = Math.max(0.6, lm.visibility);
+
+    if (status === 'success') {
+      ctx.shadowColor = themeColor;
+      ctx.shadowBlur = 8;
+    } else {
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+    }
 
     ctx.beginPath();
-    ctx.moveTo(a.x * width, a.y * height);
-    ctx.lineTo(b.x * width, b.y * height);
-    ctx.stroke();
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    ctx.fill();
   }
 
   ctx.globalAlpha = 1;
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
 }
+
