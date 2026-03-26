@@ -1,0 +1,42 @@
+[
+    {
+        "name": "Forward Lunges",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Curtsy Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Box Jump",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Seated Box Jump",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Bodyweight Alternating Curtsy Lunge",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    }
+]

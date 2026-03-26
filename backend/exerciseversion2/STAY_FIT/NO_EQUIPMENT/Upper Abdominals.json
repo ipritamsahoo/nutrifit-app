@@ -1,0 +1,16 @@
+[
+    {
+        "name": "Hollow Hold",
+        "difficulty": "intermediate",
+        "type": "stretch",
+        "injury_avoid": []
+    },
+    {
+        "name": "Bicycle Crunch",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    }
+]

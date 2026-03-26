@@ -1,0 +1,47 @@
+[
+    {
+        "name": "Barbell Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Bayesian Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Rope Hammer Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Seated Bayesian Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Barbell Drag Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    }
+]

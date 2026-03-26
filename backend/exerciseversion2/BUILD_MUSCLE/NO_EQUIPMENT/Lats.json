@@ -1,0 +1,29 @@
+[
+    {
+        "name": "Bodyweight Assisted Chin Up",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Bodyweight Assisted Gironda Chin Up",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Bodyweight Assisted Pull Up",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    }
+]

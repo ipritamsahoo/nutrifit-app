@@ -1,0 +1,70 @@
+[
+    {
+        "name": "Kettlebell Farmers Carry",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Barbell Wrist Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Wrist Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Reverse Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Seated Bayesian Reverse Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Bench Wrist Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "elbow",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Kettlebell Bench Wrist Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "elbow",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Kettlebell Walking Farmers March",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    }
+]

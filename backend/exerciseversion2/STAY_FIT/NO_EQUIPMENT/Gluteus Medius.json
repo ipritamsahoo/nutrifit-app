@@ -1,0 +1,56 @@
+[
+    {
+        "name": "Curtsy Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Cardio Jumping Jacks",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Bodyweight Alternating Curtsy Lunge",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Cardio Band Hammer Curl Jacks",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cardio Band Press Jacks",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cardio In And Outs",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Treadmill Side Shuffle",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    }
+]

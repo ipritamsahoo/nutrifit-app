@@ -1,0 +1,31 @@
+[
+    {
+        "name": "Cardio Band Hammer Curl Jacks",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cardio Row Erg Rower",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cardio Row Erg Rower Arms Only",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    }
+]

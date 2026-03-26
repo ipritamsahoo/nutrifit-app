@@ -24,6 +24,16 @@ class PlanRequest(BaseModel):
     meals_per_day: int = Field(default=3, description="Meals per day")
     plan_mode: Optional[str] = Field(default="ai", description="Generation mode: 'ai' or 'deterministic_diet'")
     plan_type: Optional[str] = Field(default="both", description="Type of plan: 'diet', 'exercise', or 'both'")
+    
+    # Workout Specifics (from Doctor Dashboard)
+    workout_goal: Optional[str] = Field(default=None)
+    equipment: Optional[str] = Field(default=None)
+    target_areas: Optional[List[str]] = Field(default_factory=list)
+    fitness_level: Optional[str] = Field(default=None)
+    workout_days: Optional[str] = Field(default=None)
+    session_time: Optional[str] = Field(default=None)
+    injuries: Optional[List[str]] = Field(default_factory=list)
+    intensity: Optional[str] = Field(default=None)
 
 class PlanResponse(BaseModel):
     """Successful response from POST /generate-plan."""
@@ -78,7 +88,16 @@ async def create_plan(req: PlanRequest):
                 height=req.height,
                 goal=req.goal,
                 medical_conditions=req.medical_conditions,
-                diet_preference=req.food_preference
+                diet_preference=req.food_preference,
+                # New Workout Specifics
+                workout_goal=req.workout_goal,
+                equipment=req.equipment,
+                target_areas=req.target_areas,
+                fitness_level=req.fitness_level,
+                workout_days=req.workout_days,
+                session_time=req.session_time,
+                injuries=req.injuries,
+                intensity=req.intensity
             )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Plan generation failed: {e}")

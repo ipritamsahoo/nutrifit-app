@@ -1,0 +1,14 @@
+[
+    {
+        "name": "Cardio Forward Scissor",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio In And Out Forward",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    }
+]

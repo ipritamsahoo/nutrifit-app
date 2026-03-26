@@ -1,0 +1,11 @@
+[
+    {
+        "name": "Diamond Push Ups",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    }
+]

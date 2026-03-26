@@ -129,11 +129,10 @@ def construct_musclewiki_video_url(musclewiki_url: str) -> dict | None:
             front_encoded = urllib.parse.quote(f"{base_filename}-front.mp4")
             side_encoded = urllib.parse.quote(f"{base_filename}-side.mp4")
             
-            # Return relative paths to handle protocol mismatch (HTTPS/HTTP)
-            # The frontend will prepend the correct API_BASE
+            # Return direct paths instead of proxy-video since Cloudflare blocks python httpx
             return {
-                "front": f"/proxy-video?file={front_encoded}",
-                "side": f"/proxy-video?file={side_encoded}"
+                "front": f"https://media.musclewiki.com/media/uploads/videos/branded/{front_encoded}",
+                "side": f"https://media.musclewiki.com/media/uploads/videos/branded/{side_encoded}"
             }
     except Exception:
 

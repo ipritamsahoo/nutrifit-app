@@ -1,0 +1,30 @@
+[
+    {
+        "name": "Kettlebell Decline Skull Crusher",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Barbell Overhead Tricep Extension",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow",
+            "knee"
+        ]
+    },
+    {
+        "name": "Barbell Skullcrusher",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Dumbbell Incline Skullover",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    }
+]

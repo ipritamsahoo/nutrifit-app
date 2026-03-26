@@ -44,13 +44,31 @@ async def chat_endpoint(req: ChatRequest):
     if plan:
         # Auto-save the plan to Firestore
         try:
+            # Detect V2 vs Legacy Schema
+            is_v2 = "sched" in plan and "tpl" in plan
+            
+            if is_v2:
+                diet_json = plan.get("diet", {})
+                workout_json = {
+                    "sched": plan.get("sched", []),
+                    "tpl": plan.get("tpl", {})
+                }
+                # V2 stores calories/water inside the diet block
+                calories = diet_json.get("cal") or plan.get("daily_calories_target")
+                water = (diet_json.get("water_ml") / 1000) if diet_json.get("water_ml") else plan.get("daily_water_liters")
+            else:
+                diet_json = plan.get("diet_plan", {})
+                workout_json = plan.get("workout_plan", {})
+                calories = plan.get("daily_calories_target")
+                water = plan.get("daily_water_liters")
+
             plan_doc = {
                 "uid": req.uid,
                 "plan_type": "ai",
-                "diet_json": plan.get("diet_plan", {}),
-                "workout_json": plan.get("workout_plan", {}),
-                "daily_calories_target": plan.get("daily_calories_target"),
-                "daily_water_liters": plan.get("daily_water_liters"),
+                "diet_json": diet_json,
+                "workout_json": workout_json,
+                "daily_calories_target": calories,
+                "daily_water_liters": water,
                 "notes": plan.get("notes", ""),
                 "status": "draft",  # outsider needs to approve
                 "created_at": datetime.now(timezone.utc).isoformat(),

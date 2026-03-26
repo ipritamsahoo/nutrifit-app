@@ -1,0 +1,74 @@
+[
+    {
+        "name": "Cardio Step Out Jacks",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Elevated Pike Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Forward Arm Circle",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Pole Overhead Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Cardio Assault Bike",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio Band Press Jacks",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cardio Jumping Jacks",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Bodyweight Pike Press",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Ring Standing Pushup",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    }
+]

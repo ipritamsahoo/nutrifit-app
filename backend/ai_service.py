@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import random
 from math import gcd
 from typing import Any, List, Dict, Optional, Set, Union, cast
 
@@ -18,17 +19,21 @@ from exercise_utils import coerce_valid_exercise_name
 
 load_dotenv()
 
-_MODEL_NAME = "google/gemma-3n-e4b-it"
-_API_KEY = os.getenv("NVIDIA_API_KEY")
+_MODEL_NAME = "stepfun/step-3.5-flash:free"
+_API_KEY = os.getenv("OPENROUTER_API_KEY_2")
 
 if not _API_KEY:
-    print("[AI Service] WARNING: NVIDIA_API_KEY not found in environment!")
-    _API_KEY = "nvapi-missing"
+    print("[AI Service] WARNING: OPENROUTER_API_KEY_2 not found! Falling back to Key 1")
+    _API_KEY = os.getenv("OPENROUTER_API_KEY", "sk-missing")
 
 client = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
+    base_url="https://openrouter.ai/api/v1",
     api_key=_API_KEY,
-    timeout=5.0,
+    timeout=15.0,
+    default_headers={
+        "HTTP-Referer": "http://localhost:5173",
+        "X-Title": "HonFit Plan Generator",
+    }
 )
 
 _TEMPLATE_SEQUENCE = (
@@ -41,7 +46,28 @@ _TEMPLATE_SEQUENCE = (
     ("A4", "A", 3),
 )
 
-FIXED_SCHEDULE = [template_key for template_key, _, _ in _TEMPLATE_SEQUENCE]
+def _get_dynamic_schedule(workout_days: str) -> List[str]:
+    """
+    Returns a 7-element list of template keys (A1, B1, REST) 
+    based on the requested frequency.
+    """
+    days = (workout_days or "").lower()
+    
+    # Check strings specifically for common frontend labels
+    if "3" in days or "three" in days:
+        return ["A1", "REST", "B1", "REST", "A2", "REST", "REST"]
+    
+    if "4" in days or "four" in days:
+        return ["A1", "B1", "REST", "A2", "B2", "REST", "REST"]
+    
+    if "5" in days or "6" in days or "5-6" in days or "five" in days or "six" in days:
+        return ["A1", "B1", "A2", "B2", "A3", "B3", "REST"]
+        
+    # Default to 7 days if unknown (legacy)
+    return ["A1", "B1", "A2", "B2", "A3", "B3", "A4"]
+
+# Legacy alias for backward compatibility with outsider chatbot if needed
+FIXED_SCHEDULE = ["A1", "B1", "A2", "B2", "A3", "B3", "A4"]
 
 _CALORIE_TARGETS = {
     "BUILD_MUSCLE": 2600,
@@ -409,7 +435,7 @@ _CONSERVATIVE_EXERCISES = {
     ],
 }
 
-_TPL_ITEM_PATTERN = re.compile(r"^\s*([^|]+)\|(\d{1,2})x(\d{1,3}s?)\|r(\d{1,3})\s*$")
+_TPL_ITEM_PATTERN = re.compile(r"^\s*([^|]+?)\s*\|\s*(\d{1,3})\s*[xX\*]\s*(\d{1,3}s?)\s*\|\s*r?(\d{1,4})\s*$")
 _JSON_BLOCK_PATTERN = re.compile(r"\{[\s\S]*\}")
 
 
@@ -621,11 +647,56 @@ def _get_candidate_templates(goal: str) -> dict[str, list[str]]:
     }
 
 
+def _build_doctor_tpl_prompt(
+    goal: str,
+    level: str,
+    days: str,
+    time: str,
+    muscles: str,
+    equipment: str,
+    injury: str,
+    filtered_exercises: List[str]
+) -> str:
+    """
+    Requested custom prompt for the Doctor Dashboard.
+    Ensures AI uses specific details and exercises.
+    """
+    ex_list = ", ".join(filtered_exercises) if filtered_exercises else "N/A"
+    return f"""User Details:
+Goal: {goal}
+Fitness Level: {level}
+Workout Days: {days}
+Time: {time}
+Target Areas: {muscles}
+Equipment: {equipment}
+Injury: {injury}
+
+Available Exercises:
+{ex_list}
+
+Task:
+1. Create two workout sets (Set A and Set B)
+2. Use only the given exercises
+3. Add sets and reps
+4. Make it suitable for user's level and time
+5. Distribute sets across 7 days alternately
+6. Keep 1 rest day
+
+Important Retrieval Rules:
+- Return ONLY a valid JSON object.
+- NO markdown triple backticks. NO conversational text.
+- JSON Schema: {{"tpl": {{"A": {{"focus": ["string"], "dur": number, "ex": ["Name|SetsxReps|rRestSeconds"]}}, "B": {{"focus": ["string"], "dur": number, "ex": ["Name|SetsxReps|rRestSeconds"]}}}}}}
+- Exactly 4 exercises per set in "ex" array.
+- In "ex", each exercise MUST follow the exact format: "Name|SetsxReps|rRestSeconds" (e.g., "Push Up|3x12|r60"). 
+- Use lowercase 'x' as separator, no spaces inside the triplets.
+"""
+
+
 def _build_tpl_prompt(
     goal: str,
     medical_conditions: str,
-    a_candidates: list[str],
-    b_candidates: list[str],
+    a_candidates: List[str],
+    b_candidates: List[str],
 ) -> str:
     medical_text = _clean_medical_conditions(medical_conditions)
     return "\n".join(
@@ -918,15 +989,31 @@ def _build_weekly_templates(
     medical_conditions: str,
     base_templates: dict[str, dict[str, Any]],
     candidates: dict[str, list[str]],
+    workout_days: str = ""
 ) -> dict[str, Any]:
     del goal, medical_conditions, candidates
 
+    sched = _get_dynamic_schedule(workout_days)
+    print(f"[AI Service] Dynamic Schedule Generated: {sched} (Based on: {workout_days})")
+    
     weekly_tpl: dict[str, dict[str, Any]] = {}
-    for template_key, base_key, step in _TEMPLATE_SEQUENCE:
-        weekly_tpl[template_key] = _build_progressive_template(base_templates.get(base_key, {}), step)
+    
+    # Map for progression (key -> base template, step index)
+    progression: Dict[str, tuple[str, int]] = {
+        "A1": ("A", 0), "B1": ("B", 0),
+        "A2": ("A", 1), "B2": ("B", 1),
+        "A3": ("A", 2), "B3": ("B", 2),
+        "A4": ("A", 3),
+    }
+
+    # Only build templates for non-REST days in the schedule
+    for day_code in sched:
+        if day_code != "REST" and day_code in progression:
+            base_key, step = progression[day_code]
+            weekly_tpl[day_code] = _build_progressive_template(base_templates.get(base_key, {}), step)
 
     return {
-        "sched": list(FIXED_SCHEDULE),
+        "sched": sched,
         "tpl": weekly_tpl,
     }
 
@@ -938,10 +1025,11 @@ def _build_fallback_plan(
     goal: str,
     medical_conditions: str = "",
     diet_preference: str = "",
+    workout_days: str = ""
 ) -> dict[str, Any]:
     goal_key = _normalize_goal(goal)
     base_tpl = _get_fallback_tpl(goal_key, medical_conditions)
-    weekly_workout = _build_weekly_templates(goal_key, medical_conditions, base_tpl, _get_candidate_templates(goal_key))
+    weekly_workout = _build_weekly_templates(goal_key, medical_conditions, base_tpl, _get_candidate_templates(goal_key), workout_days)
     return {
         "schema_version": 2,
         "goal": goal_key,
@@ -1035,26 +1123,31 @@ def _safe_parse_tpl(
                 return None
 
             sets = int(match.group(2))
-            reps_or_seconds = match.group(3)
-            rest_seconds = int(match.group(4))
-
-            if sets < 1 or sets > 6 or rest_seconds < 15 or rest_seconds > 180:
+            reps = match.group(3).strip().lower() # Ensure consistency (e.g., 30s)
+            rest = int(match.group(4))
+            
+            if sets < 1 or sets > 6 or rest < 15 or rest > 180:
                 print(f"[Gemini] Validation failed: invalid set/rest values in {template_key}")
                 return None
 
-            if str(reps_or_seconds).endswith("s"):
+            if reps.endswith("s"):
                 # Use rstrip to avoid slicing linter bugs
-                duration_value = int(str(reps_or_seconds).rstrip("s"))
+                duration_value = int(reps.rstrip("s"))
                 if duration_value < 10 or duration_value > 120:
                     print(f"[Gemini] Validation failed: invalid time value in {template_key}")
                     return None
             else:
-                rep_value = int(reps_or_seconds)
-                if rep_value < 4 or rep_value > 30:
-                    print(f"[Gemini] Validation failed: invalid rep value in {template_key}")
+                try:
+                    rep_value = int(reps)
+                    if rep_value < 4 or rep_value > 30:
+                        print(f"[Gemini] Validation failed: invalid rep value in {template_key}")
+                        return None
+                except ValueError:
+                    print(f"[Gemini] Validation failed: non-numeric reps in {template_key}")
                     return None
 
-            normalized_exercises.append(f"{exercise_name}|{sets}x{reps_or_seconds}|r{rest_seconds}")
+            # NORMALIZATION: Force clean "Name|SetsxReps|rRest" format
+            normalized_exercises.append(f"{exercise_name}|{sets}x{reps}|r{rest}")
 
         normalized[template_key] = {
             "focus": [item.strip() for item in focus],
@@ -1065,6 +1158,76 @@ def _safe_parse_tpl(
     return normalized
 
 
+def _get_v2_filtered_exercises(goal: str, equipment: str, targets: Optional[List[str]], injuries: Optional[List[str]]) -> List[str]:
+    """
+    Read JSON objects from the structured exerciseversion2/ folder.
+    Filters by Goal, Equipment, Target Area, and EXCLUDES based on Injury tags.
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    v2_dir = os.path.join(base_dir, "exerciseversion2")
+    
+    # Normalize Goal & Equipment to match folder names
+    goal_norm = (goal or "").strip().upper().replace(" ", "_").replace("-", "_")
+    equip_norm = (equipment or "").strip().upper().replace(" ", "_").replace("-", "_")
+    
+    goal_path = os.path.join(v2_dir, goal_norm)
+    equip_path = os.path.join(goal_path, equip_norm)
+    
+    if not os.path.exists(equip_path):
+        # Fallback if specific folder doesn't exist
+        print(f"[AI Service] Warning: Path {equip_path} not found. Fallback to STAY_FIT/NO_EQUIPMENT")
+        equip_path = os.path.join(v2_dir, "STAY_FIT", "NO_EQUIPMENT")
+    
+    # Prepare injury list for exclusion (lowercase for case-insensitive matching)
+    injury_list: List[str] = [i.lower() for i in (injuries or []) if i and i.lower() != 'none']
+    
+    all_filtered: List[str] = []
+    
+    # Process target areas (they correspond to filenames like "Chest.json")
+    # If no targets provided, or "Full Body", we grab from all files in the equip_dir
+    target_files: List[str] = []
+    if not targets or any("full" in (t or "").lower() for t in targets):
+        if os.path.exists(equip_path):
+            target_files = [f for f in os.listdir(equip_path) if f.endswith(".json")]
+    else:
+        # Map targets to filenames
+        if os.path.exists(equip_path):
+            all_files_map = {f.lower().replace(".json", ""): f for f in os.listdir(equip_path) if f.endswith(".json")}
+            for t in targets:
+                if not t: continue
+                t_key = t.strip().lower()
+                if t_key in all_files_map:
+                    target_files.append(all_files_map[t_key])
+                    
+    # Actually read the files and filter
+    for filename in target_files:
+        filepath = os.path.join(equip_path, filename)
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                exercises_data = json.load(f)
+                # Filter each exercise object
+                for ex in exercises_data:
+                    # Check injuries
+                    avoid_tags: List[str] = [str(tag).lower() for tag in ex.get("injury_avoid", [])]
+                    is_safe = True
+                    for injury in injury_list:
+                        if any(tag in injury for tag in avoid_tags):
+                            is_safe = False
+                            break
+                    
+                    if is_safe:
+                        name = ex.get("name")
+                        if name:
+                            all_filtered.append(str(name))
+        except Exception as e:
+            print(f"[AI Service] Failed to read {filepath}: {e}")
+
+    unique_names: List[str] = list(set(all_filtered))
+    # Return at most 25 for the prompt to keep it concise
+    if len(unique_names) > 25:
+        return random.sample(unique_names, 25)
+    return unique_names
+
 def generate_plan(
     age: int,
     weight: float,
@@ -1072,21 +1235,92 @@ def generate_plan(
     goal: str,
     medical_conditions: str = "",
     diet_preference: str = "",
-) -> dict[str, Any]:
+    # Optional Doctor Dashboard Parameters
+    workout_goal: Optional[str] = None,
+    equipment: Optional[str] = None,
+    target_areas: Optional[List[str]] = None,
+    fitness_level: Optional[str] = None,
+    workout_days: Optional[str] = None,
+    session_time: Optional[str] = None,
+    injuries: Optional[List[str]] = None,
+    intensity: Optional[str] = None,
+) -> Dict[str, Any]:
     """
-    V2 DETERMINISTIC GENERATOR (NO AI)
-    Complies with requirements: 
-    1. Diet Variation (Meal Rotation logic)
-    2. Workout Progression (A/B templates, dynamic reps/sets)
-    3. Zero LLM usage for plan generation.
+    Main entry point for plan generation.
+    - If Doctor Dashboard inputs (workout_goal, etc.) are present, use AI-assisted filtering (V2).
+    - Otherwise, use the legacy deterministic/fallback flow for the outsider chatbot.
     """
     profile_hash = _build_profile_hash(age, weight, height, goal, medical_conditions, diet_preference)
-    plan = _build_fallback_plan(age, weight, height, goal, medical_conditions, diet_preference)
+    
+    # DOCTOR DASHBOARD PATH: If we have specific workout inputs, use Smart AI route
+    if workout_goal and equipment:
+        print(f"[AI Service] Using Smart V2 Filter Route for Doctor Dashboard...")
+        
+        # 1. Smart Filter from V2 Data with Injury Exclusion
+        v2_filtered = _get_v2_filtered_exercises(workout_goal, equipment, target_areas, injuries)
+        
+        # 2. Build AI Prompt for Gemini/Gemma
+        # We'll use the A/B templates as they are more consistent for medical use
+        mid = len(v2_filtered) // 2
+        a_candidates = v2_filtered[0:mid] if v2_filtered else []
+        b_candidates = v2_filtered[mid:] if v2_filtered else []
+        
+        if not v2_filtered:
+            # Emergency fallback if filtering yielded nothing
+            print("[AI Service] EMERGENCY: Smart filtering returned zero exercises. Using fallback.")
+            return {
+                "profile_hash": profile_hash,
+                "plan": _build_fallback_plan(age, weight, height, goal, medical_conditions, diet_preference, workout_days or ""),
+            }
+
+        prompt = _build_doctor_tpl_prompt(
+            goal=workout_goal,
+            level=fitness_level or "Beginner",
+            days=workout_days or "3 days/week",
+            time=session_time or "20-30 min",
+            muscles=", ".join(target_areas) if target_areas else "Full Body",
+            equipment=equipment,
+            injury=", ".join(injuries) if injuries else "None",
+            filtered_exercises=v2_filtered
+        )
+        
+        try:
+            # Call NVIDIA model (or your preferred LLM)
+            response = client.chat.completions.create(
+                model=_MODEL_NAME,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=600,
+            )
+            raw_ai = response.choices[0].message.content or ""
+            tpl_data = _safe_parse_tpl(raw_ai, a_candidates, b_candidates)
+            
+            if tpl_data:
+                # Successfully generated AI templates. Now build the full 7-day schedule.
+                weekly_plan = _build_weekly_templates(workout_goal, medical_conditions, tpl_data, {}, workout_days or "")
+                return {
+                    "profile_hash": profile_hash,
+                    "plan": {
+                        "schema_version": 2,
+                        "goal": _normalize_goal(workout_goal),
+                        "sched": weekly_plan["sched"],
+                        "tpl": weekly_plan["tpl"],
+                        "diet": _build_demo_diet(age, weight, height, goal, medical_conditions, diet_preference),
+                        "allowed_exercises": v2_filtered,
+                        "notes": f"Personalized plan for {fitness_level} level. Frequency: {workout_days}. Session: {session_time}."
+                    }
+                }
+        except Exception as e:
+            print(f"[AI Service] AI generation failed, using fallback: {e}")
+            
+    # FALLBACK / OUTSIDER PATH: Default to deterministic logic to avoid breaking legacy chatbot
+    print(f"[AI Service] Using Fallback / Deterministic Route...")
+    plan = _build_fallback_plan(age, weight, height, goal, medical_conditions, diet_preference, workout_days or "")
     
     return {
         "profile_hash": profile_hash,
         "plan": plan,
     }
 
-# Alias for generate_compact_plan if needed by other modules
+# Alias for compatibility
 generate_compact_plan = generate_plan
