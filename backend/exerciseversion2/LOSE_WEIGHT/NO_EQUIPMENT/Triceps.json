@@ -1,0 +1,74 @@
+[
+    {
+        "name": "Diamond Push Ups",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Bodyweight Diamond Knee Push Ups",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Bodyweight Elevated Push Up",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Bodyweight Incline Knee Push Up",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Bodyweight Knee Push Ups",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Incline Push Up",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Decline Push Up",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cardio Band Press Jacks",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    }
+]

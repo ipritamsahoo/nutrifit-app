@@ -1,0 +1,18 @@
+[
+    {
+        "name": "Dumbbell Bulgarian Split Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Landmine Curtsy Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    }
+]

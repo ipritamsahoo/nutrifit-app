@@ -1,0 +1,12 @@
+[
+    {
+        "name": "Cable Standing Leg Extension",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow",
+            "knee"
+        ]
+    }
+]

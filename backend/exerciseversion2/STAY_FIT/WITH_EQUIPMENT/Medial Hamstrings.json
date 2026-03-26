@@ -1,0 +1,11 @@
+[
+    {
+        "name": "Machine Seated Leg Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    }
+]

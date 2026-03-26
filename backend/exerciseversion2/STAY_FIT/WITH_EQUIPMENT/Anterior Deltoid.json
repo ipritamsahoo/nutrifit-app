@@ -1,0 +1,176 @@
+[
+    {
+        "name": "Barbell Overhead Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Dumbbell Front Raise",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Barbell Front Raise",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Kettlebell Front Raise",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Band Front Raise",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Barbell Incline Bench Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Landmine Snatch",
+        "difficulty": "advanced",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cable Bar Front Raise",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cable Bench Press",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Barbell High Incline Bench Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Kettlebell Incline Bench Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Landmine Seated Alternating Overhead Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Landmine Seated Overhead Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Landmine Single Arm Overhead Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Landmine Single Arm Push Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Dumbbell Arnold Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Dumbbell Neutral Overhead Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Dumbbell Overhead Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Dumbbell Push Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Dumbbell Seated Arnold Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Bosu Ball Pike Pushup",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    }
+]

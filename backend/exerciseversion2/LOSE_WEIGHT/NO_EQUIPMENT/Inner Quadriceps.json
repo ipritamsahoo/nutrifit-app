@@ -1,0 +1,26 @@
+[
+    {
+        "name": "Forward Lunges",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Curtsy Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Bodyweight Alternating Curtsy Lunge",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    }
+]

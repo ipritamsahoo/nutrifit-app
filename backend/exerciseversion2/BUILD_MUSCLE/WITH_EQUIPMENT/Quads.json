@@ -1,0 +1,283 @@
+[
+    {
+        "name": "Barbell Curtsy Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Barbell Bulgarian Split Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Barbell Front Squat Olympic",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Barbell Front Squat Bodybuilding",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Barbell High Bar Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Landmine Alternating Lunge And Twist",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Landmine Alternating Lunge To Chest Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "knee",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Landmine Curtsy Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Landmine Goblet Curtsy Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Landmine Rotational Lift To Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Dumbbell Glute Bridge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Dumbbell Bulgarian Split Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Dumbbell Forward Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Dumbbell Goblet Forward Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Dumbbell Goblet Reverse Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Dumbbell Front Rack Pause Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Dumbbell Front Rack Step Up",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Dumbbell Step Up",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Machine Leg Press",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "knee",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Machine Hack Squat",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Machine Horizontal Sissy Leg Press",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "knee",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Machine Horizontal Leg Press",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "knee",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Kettlebell Step Up",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Kettlebell Goblet Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Kettlebell Heels Up Goblet Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Kettlebell Single Arm Reverse Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Kettlebell Lateral Lunge (Single)",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Kettlebell Sumo Deadlift",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Kettlebell Front Rack Step Up",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Cable Goblet Squat",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Cable Standing Leg Extension",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow",
+            "knee"
+        ]
+    },
+    {
+        "name": "Cable Zercher Squat",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Plate Reverse Lunge Twist",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Vitruvian Belt Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    }
+]

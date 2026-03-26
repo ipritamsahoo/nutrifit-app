@@ -1,0 +1,53 @@
+[
+    {
+        "name": "Good Mornings",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Single Legged Romanian Deadlifts",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Nordic Hamstring Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Bodyweight Reverse Lunge",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Treadmill Jog",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Treadmill Walk",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio Figure Eight Sprint",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    }
+]

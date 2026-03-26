@@ -1,0 +1,47 @@
+[
+    {
+        "name": "Barbell Incline Bench Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cable Incline Bench Press",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cable Single Arm Incline Bench Press",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Barbell High Incline Bench Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Kettlebell Incline Bench Press",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    }
+]

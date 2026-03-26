@@ -1,0 +1,14 @@
+[
+    {
+        "name": "Bodyweight Pike Shrug",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Elevated Pike Shoulder Shrug",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    }
+]

@@ -1,0 +1,29 @@
+[
+    {
+        "name": "Bench Dips",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Diamond Push Ups",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Bodyweight Box Assisted Dips",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    }
+]

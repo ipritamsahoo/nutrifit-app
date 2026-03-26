@@ -57,7 +57,7 @@ export default function UserWorkspace() {
   const [isDietDetailOpen, setIsDietDetailOpen] = useState(false);
   const [workoutViewState, setWorkoutViewState] = useState('list'); // 'list', 'demo', 'live'
   const [selectedExercise, setSelectedExercise] = useState(null);
-  const [showSideBySide, setShowSideBySide] = useState(false);
+  const [activeAngle, setActiveAngle] = useState('front');
   const [activeDay, setActiveDay] = useState(null); // For progress chart tooltip
 
   // --- CAMERA STATE ---
@@ -83,6 +83,27 @@ export default function UserWorkspace() {
   const todayDiet = useMemo(() => {
     const dj = plan?.diet_json;
     if (!dj || Object.keys(dj).length === 0) return null;
+
+    // V2 Schema Support
+    if (dj.days && dj.days[todayKey]) {
+      const dayMeals = dj.days[todayKey];
+      if (Array.isArray(dayMeals)) {
+        const mappedMeals = {};
+        dayMeals.forEach(mealStr => {
+           const colonIdx = mealStr.indexOf(':');
+           if (colonIdx !== -1) {
+             const slot = mealStr.substring(0, colonIdx);
+             const rest = mealStr.substring(colonIdx + 1);
+             const parts = rest.split('|');
+             const name = parts[0] || rest;
+             const cal = parts[1] || '';
+             mappedMeals[slot] = cal ? `${name} (${cal} kcal)` : name;
+           }
+        });
+        return mappedMeals;
+      }
+    }
+
     if (dj[todayKey]) return dj[todayKey];
     if (dj.plan) return dj.plan;
     if (dj.breakfast || dj.lunch || dj.dinner || dj.Breakfast || dj.Lunch || dj.Dinner) return dj;
@@ -92,6 +113,36 @@ export default function UserWorkspace() {
   const exercises = useMemo(() => {
     const wj = plan?.workout_json;
     if (!wj || Object.keys(wj).length === 0) return [];
+    
+    // V2 Schema Support
+    if (wj.sched && wj.tpl) {
+      const dayMatch = todayKey.match(/day_(\d+)/);
+      const dayIndex = dayMatch ? parseInt(dayMatch[1], 10) - 1 : 0;
+      const validIndex = Math.max(0, Math.min(6, dayIndex));
+      
+      const scheduleKey = wj.sched[validIndex];
+      if (scheduleKey === 'REST' || !scheduleKey) {
+        return [{ name: 'Rest & Recovery', sets: 0, reps: 0 }];
+      }
+      
+      const template = wj.tpl[scheduleKey];
+      if (!template || !template.ex) return [];
+
+      return template.ex.map((str, idx) => {
+        const parts = str.split('|');
+        const name = parts[0] || str;
+        const setsReps = parts[1] ? parts[1].split('x') : ['3', '12'];
+        return { 
+          id: `ex_${idx}`, 
+          name: name.trim(), 
+          sets: setsReps[0] || 3, 
+          reps: setsReps[1] || 12,
+          target_muscle: template.focus ? template.focus.join(', ') : 'General',
+          instructions: `Rest ${parts[2] ? parts[2].replace('r', '') : '60'}s between sets.`
+        };
+      });
+    }
+
     if (wj[todayKey]?.exercises) return wj[todayKey].exercises;
     if (wj.plan?.exercises) return wj.plan.exercises;
     if (Array.isArray(wj.exercises)) return wj.exercises;
@@ -229,26 +280,19 @@ export default function UserWorkspace() {
 
   // Prefetch MuscleWiki media
   useEffect(() => {
-    if (!plan || !plan.workout_json) return;
+    if (!exercises || exercises.length === 0 || exercises[0].name === 'Rest & Recovery') return;
     const abortController = new AbortController();
     const signal = abortController.signal;
 
     async function runSequentalPrefetch() {
-      // Resolve exercises using the same logic as resolveWorkout
-      const wj = plan.workout_json;
-      let exList = [];
-      if (wj[todayKey]?.exercises) exList = wj[todayKey].exercises;
-      else if (wj.plan?.exercises) exList = wj.plan.exercises;
-      else if (Array.isArray(wj.exercises)) exList = wj.exercises;
-
-      for (const ex of exList) {
+      for (const ex of exercises) {
         if (signal.aborted) return;
         if (ex.name) await prefetchMuscleWikiVideo(ex.name);
       }
     }
     runSequentalPrefetch();
     return () => abortController.abort();
-  }, [plan, todayKey]);
+  }, [exercises]);
 
   function handleLogout() {
     logout();
@@ -558,9 +602,10 @@ export default function UserWorkspace() {
   // --- WORKOUT VIEW ---
   const WorkoutView = () => {
     const handleProceed = async (ex) => {
+      console.log('[Proceed] Exercise clicked:', ex.name, ex);
       setSelectedExercise(ex);
       setWorkoutViewState('demo');
-      setShowSideBySide(false);
+      setActiveAngle('front');
       setDemoFrontLoaded(false);
       setDemoSideLoaded(false);
       setDemoFrontError(false);
@@ -568,6 +613,7 @@ export default function UserWorkspace() {
 
       // Auto-fetch video data
       if (muscleWikiCache[ex.name]) {
+        console.log('[Proceed] Cache HIT for:', ex.name, muscleWikiCache[ex.name]);
         setDemoVideoData(muscleWikiCache[ex.name]);
         setDemoVideoLoading(false);
         return;
@@ -576,18 +622,23 @@ export default function UserWorkspace() {
       setDemoVideoData(null);
       setDemoVideoLoading(true);
       try {
-        const res = await fetch(`/musclewiki-video?name=${encodeURIComponent(ex.name)}`);
+        const url = `/musclewiki-video?name=${encodeURIComponent(ex.name)}`;
+        console.log('[Proceed] Fetching:', url);
+        const res = await fetch(url);
+        console.log('[Proceed] Response status:', res.status);
         if (res.ok) {
           const data = await res.json();
+          console.log('[Proceed] API response:', JSON.stringify(data));
           if (data.found && data.videos) {
             muscleWikiCache[ex.name] = data;
             setDemoVideoData(data);
             return;
           }
         }
+        console.log('[Proceed] No video found for:', ex.name);
         setDemoVideoData(null);
       } catch (err) {
-        console.error('Error fetching demo video:', err);
+        console.error('[Proceed] Error fetching demo video:', err);
         setDemoVideoData(null);
       } finally {
         setDemoVideoLoading(false);
@@ -755,8 +806,18 @@ export default function UserWorkspace() {
     if (workoutViewState === 'demo') {
       const frontUrl = demoVideoData?.videos?.front || null;
       const sideUrl = demoVideoData?.videos?.side || null;
+      
       const hasFront = frontUrl && !demoFrontError;
       const hasSide = sideUrl && !demoSideError;
+
+      // Determine which angle is currently actively displayed
+      const currentUrl = activeAngle === 'front' ? frontUrl : sideUrl;
+      const currentLoaded = activeAngle === 'front' ? demoFrontLoaded : demoSideLoaded;
+      const currentError = activeAngle === 'front' ? demoFrontError : demoSideError;
+      const hasCurrent = currentUrl && !currentError;
+      
+      const setLoaded = activeAngle === 'front' ? setDemoFrontLoaded : setDemoSideLoaded;
+      const setErrorState = activeAngle === 'front' ? setDemoFrontError : setDemoSideError;
 
       return (
         <div className="workout-view-container workout-demo-container">
@@ -776,71 +837,60 @@ export default function UserWorkspace() {
               </div>
             </div>
 
-            <div className={`video-layout ${showSideBySide ? '' : 'video-layout--single'}`}>
-              {/* Front Video Slot */}
-              <div className={`video-slot ${showSideBySide && hasSide && demoSideLoaded ? 'video-slot--half' : 'video-slot--full'}`}>
-                {(demoVideoLoading || (hasFront && !demoFrontLoaded)) && (
-                  <div className="slot-loader">
+            <div className="video-layout video-layout--single" style={{ width: '100%' }}>
+              <div className="video-slot video-slot--full" style={{ position: 'relative', overflow: 'hidden', minHeight: '350px', borderRadius: '12px', background: '#0f172a' }}>
+                {(demoVideoLoading || (hasCurrent && !currentLoaded)) && (
+                  <div className="slot-loader" style={{ 
+                    position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', zIndex: 10, background: '#0f172a'
+                  }}>
                     <div className="slot-loader-spinner" />
-                    <span className="slot-loader-text">{demoVideoLoading ? 'Locating workout data…' : 'Loading video…'}</span>
+                    <span className="slot-loader-text" style={{ color: '#94a3b8', marginTop: 12 }}>{demoVideoLoading ? 'Locating workout data…' : 'Loading video…'}</span>
                   </div>
                 )}
-                {hasFront && (
+                {hasCurrent && (
                   <video
-                    src={frontUrl}
+                    key={currentUrl}
+                    src={currentUrl}
                     autoPlay loop muted playsInline preload="auto"
-                    style={{ display: demoFrontLoaded ? 'block' : 'none' }}
-                    onLoadedData={() => setDemoFrontLoaded(true)}
-                    onCanPlay={() => setDemoFrontLoaded(true)}
-                    onError={() => setDemoFrontError(true)}
+                    referrerPolicy="no-referrer"
+                    style={{ 
+                      width: '100%', 
+                      minHeight: '350px',
+                      maxHeight: '500px',
+                      objectFit: 'contain',
+                      display: 'block',
+                      background: '#0f172a'
+                    }}
+                    onLoadedData={() => setLoaded(true)}
+                    onCanPlay={() => setLoaded(true)}
+                    onError={() => setErrorState(true)}
                   />
                 )}
-                {!demoVideoLoading && !hasFront && !demoFrontLoaded && (
-                  <div className="slot-empty">
+                {!demoVideoLoading && !hasCurrent && (
+                  <div className="slot-empty" style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    minHeight: '350px', color: '#64748b'
+                  }}>
                     <PlayCircle size={48} className="play-icon" />
-                    <span className="slot-empty-text">No video available</span>
+                    <span className="slot-empty-text" style={{ marginTop: 12 }}>No video available</span>
                   </div>
                 )}
-                <div className="slot-label">Angle 1: Frontal</div>
+                <div className="slot-label" style={{
+                  position: 'absolute', bottom: 8, left: 12, background: 'rgba(0,0,0,0.6)',
+                  color: '#fff', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600
+                }}>Angle: {activeAngle === 'front' ? 'Frontal' : 'Lateral'}</div>
               </div>
-
-              {showSideBySide && (
-                <div className="video-slot video-slot--half" style={{ animation: 'slideInRight 0.5s ease-out' }}>
-                  {(hasSide && !demoSideLoaded) && (
-                    <div className="slot-loader">
-                      <div className="slot-loader-spinner" />
-                      <span className="slot-loader-text">Loading side view…</span>
-                    </div>
-                  )}
-                  {hasSide && (
-                    <video
-                      src={sideUrl}
-                      autoPlay loop muted playsInline preload="auto"
-                      style={{ display: demoSideLoaded ? 'block' : 'none' }}
-                      onLoadedData={() => setDemoSideLoaded(true)}
-                      onCanPlay={() => setDemoSideLoaded(true)}
-                      onError={() => setDemoSideError(true)}
-                    />
-                  )}
-                  {!hasSide && (
-                    <div className="slot-empty">
-                      <PlayCircle size={48} className="play-icon" />
-                      <span className="slot-empty-text">Side view unavailable</span>
-                    </div>
-                  )}
-                  <div className="slot-label">Angle 2: Lateral</div>
-                </div>
-              )}
             </div>
 
             <div className="demo-bottom-controls">
               {hasFront && hasSide && (
                 <button 
-                  onClick={() => setShowSideBySide(!showSideBySide)}
+                  onClick={() => setActiveAngle(activeAngle === 'front' ? 'side' : 'front')}
                   className="btn-toggle-angle"
                 >
                   <Maximize2 size={14} style={{ marginRight: 8 }} />
-                  {showSideBySide ? 'Single View' : 'View Different Angle'}
+                  View {activeAngle === 'front' ? 'Lateral' : 'Frontal'} Angle
                 </button>
               )}
               
@@ -1038,7 +1088,7 @@ export default function UserWorkspace() {
           </h2>
           
           {/* Day Switcher UI */}
-          {plan && workoutViewState === 'list' && (
+          {plan && activeTab !== 'home' && workoutViewState === 'list' && (
             <div className="day-switcher" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
               {[1, 2, 3, 4, 5, 6, 7].map(d => (
                 <button 

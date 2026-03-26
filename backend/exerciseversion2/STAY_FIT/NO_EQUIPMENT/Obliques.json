@@ -1,0 +1,28 @@
+[
+    {
+        "name": "Oblique Crunch",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Oblique Jackknife",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Reach And Catch",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Windshield Wiper",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    }
+]

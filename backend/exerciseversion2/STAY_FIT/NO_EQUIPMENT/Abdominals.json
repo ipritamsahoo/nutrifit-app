@@ -1,0 +1,148 @@
+[
+    {
+        "name": "Laying Leg Raises",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Hollow Hold",
+        "difficulty": "intermediate",
+        "type": "stretch",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cobra Pose",
+        "difficulty": "intermediate",
+        "type": "stretch",
+        "injury_avoid": []
+    },
+    {
+        "name": "Bicycle Crunch",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Dead Bug",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Bodyweight Knee Plank Up Down",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Bodyweight Plank Up Down",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Cardio Forward Scissor",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio In And Out Forward",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Alternating Bent Leg Raise",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Bodyweight Hanging Knee Tuck",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Bodyweight Hanging L Sit",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Eccentric Dragonflag",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Elbow Plank Mountain Climber",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Frog Sit Up",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Jumping Mountain Climber",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Reach And Catch",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Slow Tempo Mountain Climber",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Sideways Scissor Kick",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Scissor Kick",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Ring Standing Roll Out",
+        "difficulty": "intermediate",
+        "type": "stretch",
+        "injury_avoid": []
+    },
+    {
+        "name": "Reverse Crunch Kick Up",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    }
+]

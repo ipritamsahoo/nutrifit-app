@@ -359,32 +359,29 @@ export default function DoctorDashboard() {
               ) : patientPlan ? (
                 <div className="plan-7day-grid">
                   {[1, 2, 3, 4, 5, 6, 7].map(day => {
-                    // Extract Diet (Handles V1 arrays, V1 objects, and V2 Array of objects)
                     let dietMeals = [];
                     const dData = patientPlan.diet_json;
                     if (dData) {
-                      if (Array.isArray(dData) || (dData[0] && dData[0].meals)) {
-                        // V2 Schema (`[ { day: 1, meals: { breakfast: {name, cal} } } ]`)
-                        const v2Day = dData[day - 1];
-                        if (v2Day && v2Day.meals) {
-                          Object.entries(v2Day.meals).forEach(([mType, mData]) => {
-                            if (mData && mData.name) {
-                              dietMeals.push(`${mType}:${mData.name}|${mData.cal || 0}`);
-                            }
-                          });
-                        }
+                      if (dData.days && dData.days[`day_${day}`]) {
+                        // V2 Schema `m` can be a string ('breakfast:Oats|300') or object ({ meal_type: 'breakfast', name: 'Oats', cal: 300 })
+                        dData.days[`day_${day}`].forEach(m => {
+                          if (typeof m === 'string') {
+                            dietMeals.push(m);
+                          } else if (m && (m.name || m.meal)) {
+                            dietMeals.push(`${m.meal_type}:${m.name || m.meal}|${m.cal || 0}`);
+                          }
+                        });
                       } else if (dData[`day_${day}`]) {
-                        // V1 Schema
+                        // V1 Schema / Legacy Fallback
                         const dX = dData[`day_${day}`];
                         if (Array.isArray(dX)) {
-                          dietMeals = dX; // ["breakfast:Oats|300"]
+                          dietMeals = dX;
                         } else if (typeof dX === 'object') {
-                          // V1 Manual Assignment (`{ breakfast: "Oats (300 cal)" }`)
                           Object.entries(dX).forEach(([mType, val]) => {
                             if (val) {
-                              // If format already has calories in parentheses, omit trailing |0
-                              const isFormatted = val.includes('(') && val.includes('cal');
-                              dietMeals.push(`${mType}:${val}|${isFormatted ? '' : '0'}`);
+                               const mealName = typeof val === 'object' ? val.meal : val;
+                               const isFormatted = mealName.includes('(') && mealName.includes('cal');
+                               dietMeals.push(`${mType}:${mealName}|${isFormatted ? '' : '0'}`);
                             }
                           });
                         }

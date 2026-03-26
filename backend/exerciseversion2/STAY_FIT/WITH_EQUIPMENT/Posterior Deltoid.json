@@ -1,0 +1,102 @@
+[
+    {
+        "name": "Dumbbell Rear Delt Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Rear Delt Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Internally Rotated Seated Rear Delt Fly",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cable Archer Row",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable High Internally Rotated Reverse Fly",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cable Rope Kneeling Face Pull",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Dumbbell Internally Rotated Rear Delt Fly",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Dumbbell Seated Rear Delt Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Shoulder External Rotation",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Kettlebell Single Arm Rear Delt Fly",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Band Face Pull",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Band Pull Apart",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    }
+]

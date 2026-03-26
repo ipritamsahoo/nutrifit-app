@@ -1,0 +1,10 @@
+[
+    {
+        "name": "Long Lever Forearm Plank",
+        "difficulty": "advanced",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    }
+]

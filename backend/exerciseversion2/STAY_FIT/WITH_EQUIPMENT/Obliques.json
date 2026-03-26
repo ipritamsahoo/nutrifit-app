@@ -1,0 +1,161 @@
+[
+    {
+        "name": "Dumbbell Wood Chopper",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Kettlebell Wood Chopper",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Band Wood Chopper",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Dumbbell Russian Twist",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Kettlebell Russian Twist",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Band Pallof Press",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cable Pallof Press",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Dumbbell Half Kneeling Wood Chopper",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Dumbbell Kneeling Wood Chopper",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Dumbbell Hand Side Plank",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Dumbbell Elbow Side Plank",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Plate Reverse Lunge Twist",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Landmine Kneeling Twist",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Landmine Russian Twist",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Medicine Ball Half Kneeling Wood Chopper",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Medicine Ball Rainbow Slam",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Medicine Ball Wood Chopper",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Landmine Stationary Twist",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Vitruvian Side Bend",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cable Half Kneeling High To Low Wood Chopper",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cable Half Kneeling Low To High Wood Chopper",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cable Oblique Pushdown",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cable Side Bend",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Kettlebell Windmill Bottom Hand",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    }
+]

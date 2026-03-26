@@ -543,33 +543,68 @@ def _generate_plan(user_summary: str, valid_exercises: str) -> str:
         return ""
 
 def chat_with_coach(messages: list[dict], uid: str = "default_session") -> str:
-    """Backend-controlled chat flow with background plan generation."""
+    """Natural AI chat flow utilizing the lightweight model for conversation and trigger parsing."""
     session_id = uid
-    answers = _extract_user_answers(messages)
-    session = _ensure_session(session_id, reset=not answers)
-    answer_count = len(answers)
+    _ensure_session(session_id, reset=len(messages) <= 1)
+    
+    # Add system prompt
+    api_messages = [{"role": "system", "content": get_chat_system_prompt()}]
+    for m in messages:
+        role = "assistant" if m.get("role") == "model" else "user"
+        content = str(m.get("parts", [""])[0])
+        api_messages.append({"role": role, "content": content})
 
-    profile = _extract_profile_from_messages(messages)
-    if profile:
-        session["profile"] = profile
+    print(f"[Chat] Sending {len(api_messages)} messages to {_CHAT_MODEL} for {uid}")
+    
+    try:
+        response = client.chat.completions.create(
+            model=_CHAT_MODEL,
+            messages=api_messages,
+            temperature=0.3
+        )
+        reply = response.choices[0].message.content or ""
+    except Exception as e:
+        print(f"[Chat] Error calling chat model: {e}")
+        return "I'm having trouble connecting to my brain right now. Could you repeat that?"
 
-    if profile and answer_count >= 7:
-        _start_filtering_background(session_id, profile)
+    print(f"[Chat] AI Reply: {reply[:100]}...")
 
-    if profile and answer_count >= 8:
-        _start_plan_generation_background(session_id, profile)
+    # Parse and execute background triggers
+    if "[START_FILTERING]" in reply:
+        try:
+            # Expected format: [START_FILTERING] Goal: <goal>, Equipment: <equip>, Targets: <t1, t2>
+            goal_match = re.search(r"Goal:\s*([^,]+)", reply, re.IGNORECASE)
+            equip_match = re.search(r"Equipment:\s*([^,]+)", reply, re.IGNORECASE)
+            target_match = re.search(r"Targets:\s*(.+?)(?=\n|$|\[)", reply, re.IGNORECASE)
+            
+            goal = goal_match.group(1).strip() if goal_match else "STAY_FIT"
+            equipment = equip_match.group(1).strip() if equip_match else "NO_EQUIPMENT"
+            targets_str = target_match.group(1).strip() if target_match else "Full Body"
+            
+            profile = {"goal": goal, "equipment": equipment, "targets": [t.strip() for t in targets_str.split(",")]}
+            _start_filtering_background(session_id, profile)
+        except Exception as e:
+            print(f"[Chat] Failed to parse filtering tags: {e}")
 
-    if profile and answer_count >= 12:
+    if "[START_PLAN_GEN]" in reply:
+        try:
+            # We recreate a full profile from chat history since the bot is now managing it natively
+            profile = _extract_profile_from_messages(messages) 
+            if profile:
+                _start_plan_generation_background(session_id, profile)
+        except Exception as e:
+            print(f"[Chat] Failed to trigger plan generation: {e}")
+
+    if "[PLAN_READY]" in reply:
+        profile = _extract_profile_from_messages(messages) or {"age": 25, "weight": 70, "height": 170, "goal": "STAY_FIT", "medical_conditions": ""}
         return _finalize_plan_for_chat(session_id, profile)
 
-    if session.get("plan_delivered"):
-        cached_plan = session.get("plan_json")
-        if _looks_like_json_object(cached_plan):
-            return _build_plan_ready_response(cached_plan)
-
-    next_prompt = _get_next_prompt(answer_count)
-    print(f"[Chat] Sending backend prompt for {session_id}: step={answer_count + 1}")
-    return next_prompt
+    # Strip out tags before returning so they don't show to the user
+    clean_reply = re.sub(r"\[START_FILTERING\][^\n]*(?:\n|$)", "", reply, flags=re.IGNORECASE)
+    clean_reply = re.sub(r"\[START_PLAN_GEN\][^\n]*(?:\n|$)", "", clean_reply, flags=re.IGNORECASE)
+    clean_reply = re.sub(r"\[PLAN_READY\][^\n]*(?:\n|$)", "", clean_reply, flags=re.IGNORECASE)
+    
+    return clean_reply.strip()
 
 def extract_plan_from_response(text: str) -> dict | None:
     """Parses JSON from AI response."""

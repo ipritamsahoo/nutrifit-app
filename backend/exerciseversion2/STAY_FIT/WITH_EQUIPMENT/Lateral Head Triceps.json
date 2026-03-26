@@ -1,0 +1,38 @@
+[
+    {
+        "name": "Cable Bar Pushdown",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cable Bar Reverse Grip Pushdown",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cable Tricep Kickback",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Single Arm Rope Pushdown",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "shoulder",
+            "wrist"
+        ]
+    }
+]

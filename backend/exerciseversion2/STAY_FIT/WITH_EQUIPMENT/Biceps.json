@@ -1,0 +1,446 @@
+[
+    {
+        "name": "Dumbbell Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Hammer Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Concentration Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Preacher Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Single Arm Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Band Bayesian Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Band Bayesian Hammer Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Band Bayesian Reverse Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Reverse Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Single Arm Preacher Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Kneeling Single Arm Row",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Laying Incline Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Single Arm Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Single Arm Row Knee",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Knee Lawnmower Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Landmine Bicep Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Landmine Concentration Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Vitruvian Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Archer Row",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Bayesian Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Rope Hammer Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Seated Bayesian Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Single Arm Underhand Grip Row",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Single Arm Neutral Grip Row",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Seated Bayesian Reverse Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cable Hammer Bayesian Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Barbell Drag Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Landmine T Bar Rows",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Neutral Pulldown",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Underhand Pulldown",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Kettlebell Single Arm Reverse Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Single Arm Row On Bench",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "shoulder",
+            "elbow",
+            "wrist"
+        ]
+    },
+    {
+        "name": "Cable Pull In",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Band Row",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Row (Single)",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Single Arm Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Rear Delt Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Rear Delt Row",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Narrow Pulldown",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "EZ Bar Preacher Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "EZ Bar Reverse Preacher Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Dumbbell Preacher Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Machine Assisted Chin Up",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Machine Assisted Narrow Pull Up",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Machine Assisted Neutral Chin Up",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Machine Assisted Pull Up",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Machine Underhand Row",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    }
+]

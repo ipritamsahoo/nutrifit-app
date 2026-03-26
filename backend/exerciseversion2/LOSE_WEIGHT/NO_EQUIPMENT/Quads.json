@@ -1,0 +1,148 @@
+[
+    {
+        "name": "Bulgarian Split Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Forward Lunges",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Jump Squats",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Bodyweight Squat",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Assisted Bulgarian Split Squat",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Curtsy Lunge",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Bodyweight Reverse Lunge",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Bodyweight Pulse Squat",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Pole Overhead Squat",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Bodyweight Alternating Curtsy Lunge",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Bodyweight Kickstand Squat",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "knee"
+        ]
+    },
+    {
+        "name": "Cardio Assault Bike",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio Figure Eight Sprint",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio Forward Scissor",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio In And Out Forward",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio Lateral Quick Feet",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio Row Erg Rower",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Cardio Sprint In Place",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Treadmill Jog",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Treadmill Walk",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    }
+]

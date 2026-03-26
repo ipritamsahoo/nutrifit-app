@@ -1,0 +1,30 @@
+[
+    {
+        "name": "Supermans",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Good Mornings",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Cobra Pose",
+        "difficulty": "intermediate",
+        "type": "stretch",
+        "injury_avoid": []
+    },
+    {
+        "name": "Single Legged Romanian Deadlifts",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    }
+]

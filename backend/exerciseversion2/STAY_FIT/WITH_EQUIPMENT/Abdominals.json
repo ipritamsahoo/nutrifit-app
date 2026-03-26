@@ -1,0 +1,132 @@
+[
+    {
+        "name": "Kettlebell Situp",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Band Crunch",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Dumbbell Situp",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Dumbbell Plank Pullthrough",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Barbell Situp",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Kettlebell Russian Twist",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Dumbbell Russian Twist",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Dumbbell Half Kneeling Wood Chopper",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Medicine Ball Plank",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Medicine Ball Partner Situp Toss",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Landmine Sit Up",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Medicine Ball Slam",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Bosu Ball Forearm Plank",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Bosu Ball Hand Plank",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Vitruvian Crunch",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Rower Knee Tuck",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Rower Pike",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back",
+            "wrist",
+            "elbow"
+        ]
+    },
+    {
+        "name": "Kettlebell Windmill Bottom Hand",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": []
+    }
+]

@@ -1,0 +1,10 @@
+[
+    {
+        "name": "Hand Side Plank Reach Through",
+        "difficulty": "intermediate",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    }
+]

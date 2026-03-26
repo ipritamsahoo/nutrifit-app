@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Long Lever Forearm Plank",
+        "difficulty": "advanced",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Cardio Forward Scissor",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio In And Out Forward",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    }
+]

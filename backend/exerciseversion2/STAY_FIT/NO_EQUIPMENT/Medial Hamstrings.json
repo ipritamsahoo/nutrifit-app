@@ -1,0 +1,11 @@
+[
+    {
+        "name": "Nordic Hamstring Curl",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "wrist",
+            "elbow"
+        ]
+    }
+]

@@ -1,0 +1,52 @@
+[
+    {
+        "name": "Hollow Hold",
+        "difficulty": "intermediate",
+        "type": "stretch",
+        "injury_avoid": []
+    },
+    {
+        "name": "Laying Leg Raises",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Bicycle Crunch",
+        "difficulty": "beginner",
+        "type": "cardio",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Cardio Forward Scissor",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Cardio In And Out Forward",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    },
+    {
+        "name": "Bodyweight Hanging Knee Tuck",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Bodyweight Hanging L Sit",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": []
+    },
+    {
+        "name": "Slow Tempo Mountain Climber",
+        "difficulty": "intermediate",
+        "type": "cardio",
+        "injury_avoid": []
+    }
+]

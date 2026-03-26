@@ -1,0 +1,18 @@
+[
+    {
+        "name": "Cable Bar Staggered Romanian Deadlift",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    },
+    {
+        "name": "Cable Elevated Deadlift",
+        "difficulty": "beginner",
+        "type": "strength",
+        "injury_avoid": [
+            "lower_back"
+        ]
+    }
+]
