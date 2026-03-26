@@ -1,25 +1,35 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime, timezone
+
 from firebase_init import db
-from gemini_service import generate_plan
+import gemini_service
+import diet_service
 
 router = APIRouter(tags=["Patient Workspace"])
 
 class PlanRequest(BaseModel):
-    """Body for POST /generate-plan (AI-assisted plan generation)."""
+    """Body for POST /generate-plan (AI-assisted or deterministic generation)."""
     uid: str = Field(..., description="Firebase Auth UID of the user")
     age: int = Field(..., ge=10, le=120, description="Age in years")
     weight: float = Field(..., gt=0, description="Weight in kg")
     height: float = Field(..., gt=0, description="Height in cm")
     goal: str = Field(..., description="Fitness goal")
     medical_conditions: str = Field(default="", description="Medical conditions (optional)")
+    gender: str = Field(default="Male", description="Patient gender")
+    food_preference: str = Field(default="Veg", description="Dietary preference")
+    restrictions: str = Field(default="", description="Food restrictions")
+    activity_level: str = Field(default="Moderate", description="Activity level")
+    meals_per_day: int = Field(default=3, description="Meals per day")
+    plan_mode: Optional[str] = Field(default="ai", description="Generation mode: 'ai' or 'deterministic_diet'")
+    plan_type: Optional[str] = Field(default="both", description="Type of plan: 'diet', 'exercise', or 'both'")
 
 class PlanResponse(BaseModel):
     """Successful response from POST /generate-plan."""
-    message: str
-    plan_id: str
-    plan: dict
+    message: str = Field(..., description="Success message")
+    plan_id: str = Field(..., description="ID of the saved plan")
+    plan: dict = Field(..., description="The generated plan JSON")
 
 @router.post("/generate-plan", response_model=PlanResponse)
 async def create_plan(req: PlanRequest):
@@ -44,25 +54,40 @@ async def create_plan(req: PlanRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save health profile: {e}")
 
-    # Generate plan via Gemini
+    # Phase 2: Generate plan
     try:
-        plan = generate_plan(
-            age=req.age,
-            weight=req.weight,
-            height=req.height,
-            goal=req.goal,
-            medical_conditions=req.medical_conditions,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+        if req.plan_mode == "deterministic_diet":
+            # Use local deterministic logic
+            plan = diet_service.generate_deterministic_diet({
+                "age": req.age,
+                "gender": req.gender,
+                "weight": req.weight,
+                "height": req.height,
+                "goal": req.goal,
+                "disease": req.medical_conditions,
+                "preference": req.food_preference,
+                "restrictions": req.restrictions,
+                "activity": req.activity_level,
+                "meals": req.meals_per_day
+            })
+        else:
+            # Generate plan via Gemini (traditional path)
+            plan = gemini_service.generate_plan(
+                age=req.age,
+                weight=req.weight,
+                height=req.height,
+                goal=req.goal,
+                medical_conditions=req.medical_conditions,
+                diet_preference=req.food_preference
+            )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gemini API call failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Plan generation failed: {e}")
 
     # Save the plan to Firestore
     try:
         plan_doc = {
             "uid": req.uid,
-            "plan_type": "ai",
+            "plan_type": "deterministic" if req.plan_mode == "deterministic_diet" else "ai",
             "diet_json": plan.get("diet_plan", {}),
             "workout_json": plan.get("workout_plan", {}),
             "daily_calories_target": plan.get("daily_calories_target"),
@@ -74,11 +99,11 @@ async def create_plan(req: PlanRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save plan: {e}")
 
-    return PlanResponse(
-        message="Plan generated and saved successfully!",
-        plan_id=doc_ref.id,
-        plan=plan,
-    )
+    return {
+        "message": "Plan generated and saved successfully!",
+        "plan_id": str(doc_ref.id),
+        "plan": plan,
+    }
 
 @router.post("/approve-plan/{plan_id}")
 async def approve_plan(plan_id: str):

@@ -60,9 +60,9 @@ export default function LoginPage() {
 
       <div className="login-card">
         <div className="login-brand">
-          <span className="brand-icon">💪</span>
-          <h1>HonFit</h1>
-          <p>AI-Powered Fitness & Health</p>
+          <span className="brand-icon">🏥</span>
+          <h1>NutriFit</h1>
+          <p>Clinical Intelligence v2.0</p>
         </div>
 
         <h2>{isSignup ? 'Create Account' : 'Welcome Back'}</h2>
@@ -91,7 +91,7 @@ export default function LoginPage() {
                     className={role === 'outsider' ? 'active' : ''}
                     onClick={() => setRole('outsider')}
                   >
-                    🏃 Fitness Enthusiast
+                    👤 Fitness Enthusiast
                   </button>
                   <button
                     type="button"
