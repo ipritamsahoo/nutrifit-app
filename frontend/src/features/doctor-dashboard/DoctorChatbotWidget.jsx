@@ -116,7 +116,7 @@ export default function DoctorChatbotWidget() {
               <div className="doc-msg-avatar bot-avatar"><Bot size={14} /></div>
             )}
             <div 
-              className={`doc-msg-bubble ${msg.role === 'user' ? 'user-bubble' : 'bot-bubble'}`}
+              className={`doc-msg-bubble ${msg.role === 'user' ? 'doc-user-bubble' : 'doc-bot-bubble'}`}
               dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }}
             />
           </div>
@@ -125,7 +125,7 @@ export default function DoctorChatbotWidget() {
         {loading && (
           <div className="doc-msg-row bot-row">
             <div className="doc-msg-avatar bot-avatar"><Bot size={14} /></div>
-            <div className="doc-msg-bubble bot-bubble typing-indicator">
+            <div className="doc-msg-bubble doc-bot-bubble typing-indicator">
               <span></span><span></span><span></span>
             </div>
           </div>

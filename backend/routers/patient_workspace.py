@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any, Union
 from datetime import datetime, timezone
 
 from firebase_init import db
-import gemini_service
+import ai_service
 import diet_service
 
 router = APIRouter(tags=["Patient Workspace"])
@@ -71,8 +71,8 @@ async def create_plan(req: PlanRequest):
                 "meals": req.meals_per_day
             })
         else:
-            # Generate plan via Gemini (traditional path)
-            plan = gemini_service.generate_plan(
+            # Generate plan via local AI service abstraction
+            plan = ai_service.generate_plan(
                 age=req.age,
                 weight=req.weight,
                 height=req.height,
@@ -83,16 +83,35 @@ async def create_plan(req: PlanRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Plan generation failed: {e}")
 
-    # Save the plan to Firestore
+    # Phase 3: Normalize and save the plan to Firestore
     try:
+        # ai_service returns {"profile_hash": ..., "plan": {...}} 
+        # while diet_service returns a flat object.
+        inner_plan = plan.get("plan", plan)
+        is_v2 = inner_plan.get("schema_version") == 2
+
+        if is_v2:
+            diet_json = inner_plan.get("diet", {})
+            workout_json = {
+                "sched": inner_plan.get("sched", []),
+                "tpl": inner_plan.get("tpl", {})
+            }
+            calories = diet_json.get("cal")
+            water = (diet_json.get("water_ml", 0) / 1000.0) if diet_json.get("water_ml") else None
+        else:
+            diet_json = inner_plan.get("diet_plan", {})
+            workout_json = inner_plan.get("workout_plan", {})
+            calories = inner_plan.get("daily_calories_target")
+            water = inner_plan.get("daily_water_liters")
+
         plan_doc = {
             "uid": req.uid,
             "plan_type": "deterministic" if req.plan_mode == "deterministic_diet" else "ai",
-            "diet_json": plan.get("diet_plan", {}),
-            "workout_json": plan.get("workout_plan", {}),
-            "daily_calories_target": plan.get("daily_calories_target"),
-            "daily_water_liters": plan.get("daily_water_liters"),
-            "notes": plan.get("notes", ""),
+            "diet_json": diet_json,
+            "workout_json": workout_json,
+            "daily_calories_target": calories,
+            "daily_water_liters": water,
+            "notes": inner_plan.get("notes", ""),
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         _, doc_ref = db.collection("plans").add(plan_doc)
@@ -102,7 +121,7 @@ async def create_plan(req: PlanRequest):
     return {
         "message": "Plan generated and saved successfully!",
         "plan_id": str(doc_ref.id),
-        "plan": plan,
+        "plan": inner_plan,
     }
 
 @router.post("/approve-plan/{plan_id}")

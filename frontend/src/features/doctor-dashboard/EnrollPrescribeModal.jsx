@@ -111,10 +111,36 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
         const data = await res.json();
         const fullPlan = data.plan || {};
         setFullGeneratedPlan(fullPlan); // Store the full 7-day data
-        
-        // Gemini / Deterministic returns a 7-day structure. We extract Day 1 for the initial preview edit.
-        const day1Diet = fullPlan.diet_plan?.day_1 || {};
-        const day1Workout = fullPlan.workout_plan?.day_1 || {};
+        let day1Diet = {};
+        let day1Workout = {};
+
+        if (fullPlan.schema_version === 2) {
+          // V2 Deterministic Schema Parsing
+          const d1Diet = fullPlan.diet?.[0] || {};
+          const meals = d1Diet.meals || {};
+          
+          day1Diet = {
+            breakfast: meals.breakfast ? `${meals.breakfast.name} (${meals.breakfast.cal || 0} cal)` : '',
+            lunch: meals.lunch ? `${meals.lunch.name} (${meals.lunch.cal || 0} cal)` : '',
+            dinner: meals.dinner ? `${meals.dinner.name} (${meals.dinner.cal || 0} cal)` : '',
+          };
+
+          const day1Key = fullPlan.sched?.[0]; 
+          const d1Template = fullPlan.tpl?.[day1Key] || {};
+          
+          day1Workout = {
+            exercises: (d1Template.ex || []).map(str => {
+               const parts = str.split('|');
+               const name = parts[0] || str;
+               const setsReps = parts[1] ? parts[1].split('x') : ['3', '10'];
+               return { name, sets: setsReps[0] || 3, reps: setsReps[1] || 10 };
+            })
+          };
+        } else {
+          // Gemini / Deterministic returns a 7-day structure. We extract Day 1 for the initial preview edit.
+          day1Diet = fullPlan.diet_plan?.day_1 || {};
+          day1Workout = fullPlan.workout_plan?.day_1 || {};
+        }
 
         if (day1Diet.breakfast) {
           const b = day1Diet.breakfast;
@@ -200,15 +226,39 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
       let finalWorkoutJson = {};
   
       if (fullGeneratedPlan) {
-        if (fullGeneratedPlan.diet_plan) {
-          finalDietJson = { ...fullGeneratedPlan.diet_plan };
-          finalDietJson.day_1 = { breakfast, lunch, dinner };
-        }
-        if (fullGeneratedPlan.workout_plan) {
-          finalWorkoutJson = { ...fullGeneratedPlan.workout_plan };
-          finalWorkoutJson.day_1 = {
-            exercises: exercises.map(({ name, sets, reps }) => ({ name, sets: +sets, reps: +reps }))
+        if (fullGeneratedPlan.schema_version === 2) {
+          finalDietJson = { ...fullGeneratedPlan.diet };
+          
+          finalWorkoutJson = { 
+            sched: fullGeneratedPlan.sched, 
+            tpl: fullGeneratedPlan.tpl 
           };
+          
+          // Modify day 1 using the local state edits
+          if (finalDietJson[0]) {
+             finalDietJson[0].meals.breakfast = { name: breakfast };
+             finalDietJson[0].meals.lunch = { name: lunch };
+             finalDietJson[0].meals.dinner = { name: dinner };
+          }
+          
+          if (finalWorkoutJson.sched && finalWorkoutJson.sched[0]) {
+             const day1Key = finalWorkoutJson.sched[0];
+             if (finalWorkoutJson.tpl[day1Key]) {
+                 finalWorkoutJson.tpl[day1Key].ex = exercises.map(({ name, sets, reps }) => `${name}|${sets}x${reps}`);
+             }
+          }
+        } else {
+          // V1 Legacy Support
+          if (fullGeneratedPlan.diet_plan) {
+            finalDietJson = { ...fullGeneratedPlan.diet_plan };
+            finalDietJson.day_1 = { breakfast, lunch, dinner };
+          }
+          if (fullGeneratedPlan.workout_plan) {
+            finalWorkoutJson = { ...fullGeneratedPlan.workout_plan };
+            finalWorkoutJson.day_1 = {
+              exercises: exercises.map(({ name, sets, reps }) => ({ name, sets: +sets, reps: +reps }))
+            };
+          }
         }
       } else {
         finalDietJson    = { day_1: { breakfast, lunch, dinner } };

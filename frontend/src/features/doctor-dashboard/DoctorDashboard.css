@@ -338,7 +338,7 @@
    COLUMN B — Monitoring & Analytics (45%)
    ══════════════════════════════════════════════════════ */
 .col-b {
-  width: 45%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   z-index: 0;
@@ -2066,4 +2066,150 @@
   gap: 6px;
   border: 1px solid rgba(255,255,255,0.1);
   transform: translateY(-20px);
+}
+
+/* ═══ PLAN VIEW MODAL ═══ */
+.cmd-modal.wide {
+  max-width: 900px;
+}
+
+.cmd-modal-body.plan-view-container {
+  padding: 1.5rem;
+  background: var(--surface-bg);
+}
+
+.col-b-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.col-b-logs-btn.alt {
+  background: var(--surface-bg);
+  color: var(--clinical-blue);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.col-b-logs-btn.alt:hover {
+  background: #f8fafc;
+  border-color: var(--clinical-blue);
+}
+
+.plan-7day-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.plan-day-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pdc-header {
+  background: #f8fafc;
+  padding: 0.8rem 1rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--clinical-blue);
+  border-bottom: 1px solid var(--border-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pdc-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.pdc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pdc-section-title {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.pdc-section.diet .pdc-section-title { color: #10b981; }
+.pdc-section.workout .pdc-section-title { color: #f59e0b; }
+
+.pdc-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pdc-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px dashed #f1f5f9;
+}
+
+.pdc-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pdc-type {
+  font-size: 0.7rem;
+  color: var(--text-disabled);
+  text-transform: capitalize;
+  width: 55px;
+}
+
+.pdc-item {
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdc-cal {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding-left: 0.5rem;
+}
+
+.pdc-badge {
+  background: var(--surface-bg);
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--clinical-blue);
+  border: 1px solid var(--border-color);
+  white-space: nowrap;
+  margin-left: 0.5rem;
+}
+
+.pdc-empty {
+  font-size: 0.85rem;
+  color: var(--text-disabled);
+  font-style: italic;
+  padding: 0.5rem 0;
 }

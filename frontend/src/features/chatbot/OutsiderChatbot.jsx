@@ -131,7 +131,7 @@ export default function OutsiderChatbot() {
 
   // ── Get quick replies for last bot message ─────────
   function getQuickReplies() {
-    if (loading) return null;
+    if (loading || detectedPlan) return null;
     const lastBotMsg = [...messages].reverse().find(m => m.role === 'model' && !m.hidden);
     if (!lastBotMsg) return null;
     
@@ -302,11 +302,10 @@ export default function OutsiderChatbot() {
   }
 
   // ── Muscle map handlers ────────────────────────────
-  async function sendSilentMessage(text) {
-    // Sends a message to the API without showing it in the UI
-    // The message is added to history as hidden so the AI knows, but user doesn't see it
-    const hiddenMsg = { role: 'user', text, hidden: true };
-    const updated = [...messages, hiddenMsg];
+  async function sendMuscleMessage(text) {
+    // Sends the selected muscles as a visible user message
+    const userMsg = { role: 'user', text };
+    const updated = [...messages, userMsg];
     setMessages(updated);
     setLoading(true);
 
@@ -322,6 +321,9 @@ export default function OutsiderChatbot() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Chat failed');
       setMessages(prev => [...prev, { role: 'model', text: data.response }]);
+      
+      checkForMuscleQuestion(data.response);
+      
       if (data.plan_detected && data.plan) {
         setDetectedPlan(data.plan);
         setDetectedPlanId(data.plan_id);
@@ -339,13 +341,13 @@ export default function OutsiderChatbot() {
 
   function handleMuscleConfirm(selectedLabels) {
     setShowMuscleMap(false);
-    const muscleText = `I want to specifically target these muscles: ${selectedLabels.join(', ')}. Please make sure to include exercises for these body parts in my workout plan.`;
-    sendSilentMessage(muscleText);
+    const text = selectedLabels.join(', ');
+    sendMuscleMessage(text);
   }
 
   function handleMuscleSkip() {
     setShowMuscleMap(false);
-    sendSilentMessage("No, I don't want to target any specific muscles. Please continue with a balanced plan.");
+    sendMuscleMessage("I don't have a specific focus area, a balanced full-body plan is fine.");
   }
 
   // ── Format message text ───────────────────────────

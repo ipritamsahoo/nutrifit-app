@@ -20,7 +20,10 @@ async def proxy_image(file: str):
     
     client = httpx.AsyncClient(verify=False) # Skip SSL verification for media server if needed
     try:
-        req = client.build_request("GET", target_url)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        req = client.build_request("GET", target_url, headers=headers)
         resp = await client.send(req)
         
         if resp.status_code != 200:
@@ -48,7 +51,9 @@ async def proxy_video(file: str, request: Request):
     decoded_file = urllib.parse.unquote(file)
     target_url = f"https://media.musclewiki.com/media/uploads/videos/branded/{decoded_file}"
     
-    headers = {}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     if "range" in request.headers:
         headers["Range"] = request.headers["range"]
         

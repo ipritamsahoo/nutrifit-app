@@ -16,8 +16,10 @@ import hashlib
 from typing import List, Optional, Any, Dict
 from openai import OpenAI
 from dotenv import load_dotenv
-from exercise_utils import sanitize_plan_workouts
-from gemini_service import _build_fallback_plan, generate_compact_plan
+from exercise_utils import sanitize_plan_workouts  # type: ignore
+from ai_service import _build_fallback_plan, generate_compact_plan
+from diet_engine import build_7_day_diet         # type: ignore
+from plan_assembler import expand_workout_plan     # type: ignore
 
 load_dotenv()
 
@@ -288,16 +290,21 @@ Greet the user and ask these questions STRICTLY ONE AT A TIME in this exact orde
 1. Age
 2. Height
 3. Weight
-4. Goal (BUILD_MUSCLE, LOSE_WEIGHT, STAY_FIT, or FLEXIBILITY)
-5. Equipment (NO_EQUIPMENT or WITH_EQUIPMENT)
+4. Goal (Present these exact options naturally without underscores: Build Muscle, Lose Weight, Stay Fit, or Flexibility)
+5. Equipment (Present these exact options naturally without underscores: No Equipment or With Equipment)
 6. Medical problems or injuries
 7. Focus Areas / Specific body parts (e.g., Chest, Biceps, Abs, Quads, Full Body)
 8. Food preference (Veg or Non-Veg)
 
 Wait for the user to answer the current question before asking the next. Do not repeat questions already answered.
 
+**CRITICAL VALIDATION RULE**: You MUST validate the user's answer using your intelligence. 
+- If you ask for 'Age' and the user replies with a height (e.g., "5 ft 8"), a name, or nonsense, politely alert them that they entered the wrong information and RE-ASK for their Age. 
+- Do NOT move to the next question until you have successfully obtained a valid answer for the current one.
+- Apply this sanity/validation check to ALL 8 questions!
+
 ## PHASE 2: SECRET TRIGGERS & FILLER QUESTIONS (BUYING TIME)
-- When the user answers #7 (Focus Areas), your next reply MUST start with:
+- When the user successfully answers #7 (Focus Areas), your next reply MUST start with:
 [START_FILTERING] Goal: <goal>, Equipment: <equipment>, Targets: Target1, Target2, Target3
 (ALWAYS use commas between targets. Smoothly ask question #8 Food preference after.)
 
@@ -315,6 +322,13 @@ Now ask these 4 lifestyle questions STRICTLY ONE AT A TIME:
 Once the user answers Filler 4, YOU MUST STOP ASKING QUESTIONS. 
 Respond with EXACTLY and ONLY this tag:
 [PLAN_READY]
+
+## PLAN MODIFICATION (IF THE USER WANTS TO CHANGE THE PLAN)
+If the user asks to "modify this plan" or "adjust it" AFTER you have already output [PLAN_READY]:
+1. DO NOT instantly output [PLAN_READY] again! This is a critical error.
+2. Politely ask the user in plain text: "Sure, let's adjust it! What exactly would you like to change? (e.g., your goal, target muscles, equipment, or food preference?)"
+3. Wait for their answer.
+4. Once they tell you what to change, output [START_FILTERING] with the updated variables to restart plan generation in the background.
 
 CRITICAL RULES:
 - NEVER loop back to ask about Goal, Age, or Weight once you are in Phase 2.
@@ -470,8 +484,8 @@ def _get_filtered_exercises(goal: str, equipment: str, targets: list[str]) -> st
     return res
 
 def _generate_plan(user_summary: str, valid_exercises: str) -> str:
-    """Stage 2 API call."""
-    print(f"[Chat] Stage 2: Generating plan with {len(valid_exercises.split(','))} exercises...")
+    """Stage 2 API call: Fetches A/B templates and assembles full programmatic plan."""
+    print(f"[Chat] Stage 2: Generating A/B templates with {len(valid_exercises.split(','))} exercises...")
     try:
         response = client_plan.chat.completions.create(
             model=_PLAN_MODEL,
@@ -481,9 +495,49 @@ def _generate_plan(user_summary: str, valid_exercises: str) -> str:
             ],
             temperature=0.1 # Lower temp makes it generate faster and stick strictly to JSON format
         )
-        result = response.choices[0].message.content or ""
-        print(f"[Chat] Stage 2 Result (first 200 chars): {result[:200]}")
-        return result
+        result_text = response.choices[0].message.content or ""
+        print(f"[Chat] Stage 2 AI templates (first 200 chars): {result_text[:200]}")
+        
+        # Parse minimal AI output
+        json_match = re.search(r'(\{[\s\S]*\})', result_text)
+        if json_match:
+            try:
+                ai_data = json.loads(json_match.group(1))
+            except:
+                ai_data = {}
+        else:
+            ai_data = {}
+            
+        template_a = ai_data.get("template_a", [])
+        template_b = ai_data.get("template_b", [])
+        
+        # Safely parse calories to integer since LLM sometimes returns strings
+        try:
+            cals_raw = ai_data.get("daily_calories_target", 2000)
+            cals = int(cals_raw)  # type: ignore
+        except (ValueError, TypeError):
+            cals = 2000
+            
+        water = ai_data.get("daily_water_liters", 2.5)
+        notes = ai_data.get("notes", "Stay hydrated and be consistent!")
+        
+        # Determine veg heuristically from user_summary
+        is_veg = "non-veg" not in user_summary.lower() and "non veg" not in user_summary.lower()
+        print(f"[Chat] V2 Assembler: is_veg={is_veg}, cals={cals}")
+        
+        # V2 Deterministic Engine Calls
+        diet = build_7_day_diet(is_veg, cals)
+        workout = expand_workout_plan(template_a, template_b)
+        
+        final_plan = {
+            "diet_plan": diet,
+            "workout_plan": workout,
+            "daily_calories_target": cals,
+            "daily_water_liters": water,
+            "notes": notes
+        }
+        
+        return json.dumps(final_plan, indent=2)
     except Exception as e:
         print(f"[Chat] Stage 2 Error: {e}")
         return ""
@@ -533,7 +587,7 @@ def extract_plan_from_response(text: str) -> dict | None:
     if json_match:
         try:
             raw = str(json_match.group(1))
-            print(f"[Extract] Found JSON (first 200 chars): {str(raw)[:200]}")
+            print(f"[Extract] Found JSON (first 200 chars): {str(raw)[:200]}")  # type: ignore
             plan = json.loads(raw)
             if (
                 isinstance(plan, dict)

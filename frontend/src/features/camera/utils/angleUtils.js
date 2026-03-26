@@ -74,7 +74,7 @@ export function checkGenericRep(angle, currentState, config) {
   // Determine standard feedback messages
   const msgPerfectWork = '🔥 Great form!';
   const msgRepComplete = '✅ Rep Complete!';
-  
+
   if (startPosition === 'up') {
     // Cycle: UP(Rest) -> DOWN(Work) -> UP(Complete Rep)
     if (isAngleUp) {
