@@ -1,7 +1,17 @@
 /**
  * DoctorChatbotWidget.css
- * Floating AI Assistant widget for the Doctor Portal Command Center
+ * Floating AI Assistant widget for the Doctor Portal (Clinical Theme)
  */
+
+:root {
+  /* Using clinical theme variables from DoctorDashboard.css */
+  --cc-bg: var(--clinical-card);
+  --border-color: var(--clinical-slate-200);
+  --text-main: var(--clinical-slate-900);
+  --text-muted: var(--clinical-slate-500);
+  --cc-accent: var(--clinical-blue);
+  --surface-bg: var(--clinical-slate-100);
+}
 
 /* ── Floating Action Button (FAB) ── */
 .doc-chatbot-fab {
@@ -11,13 +21,13 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+  background: var(--clinical-blue);
   color: white;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 210, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
   cursor: pointer;
   z-index: 9999;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -25,11 +35,7 @@
 
 .doc-chatbot-fab:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0, 210, 255, 0.5);
-}
-
-.doc-chatbot-fab:active {
-  transform: scale(0.95);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }
 
 /* ── Open Chat Panel ── */
@@ -43,8 +49,8 @@
   max-height: calc(100vh - 48px);
   background: var(--cc-bg);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  border-radius: 20px;
+  box-shadow: var(--shadow-md, 0 10px 25px rgba(0,0,0,0.1));
   display: flex;
   flex-direction: column;
   z-index: 9999;
@@ -64,7 +70,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--clinical-blue-soft);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -72,13 +78,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--text-main);
-  font-weight: 600;
+  color: var(--clinical-slate-900);
+  font-weight: 800;
   font-size: 15px;
 }
 
 .doc-chatbot-title svg {
-  color: var(--cc-accent);
+  color: var(--clinical-blue);
 }
 
 .doc-chatbot-actions button {
@@ -87,7 +93,7 @@
   color: var(--text-muted);
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,7 +102,7 @@
 }
 
 .doc-chatbot-actions button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.05);
   color: var(--text-main);
 }
 
@@ -108,7 +114,7 @@
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
-  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);
+  background: white;
 }
 
 .doc-msg-row {
@@ -137,8 +143,8 @@
 }
 
 .bot-avatar {
-  background: rgba(0, 210, 255, 0.15);
-  color: var(--cc-accent);
+  background: var(--clinical-blue-soft);
+  color: var(--clinical-blue);
 }
 
 .doc-msg-bubble {
@@ -157,14 +163,14 @@
 }
 
 .user-bubble {
-  background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+  background: var(--clinical-blue);
   color: white;
   border-top-right-radius: 4px;
 }
 
 .doc-msg-bubble strong {
   color: inherit;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Typing Indicator */
@@ -172,7 +178,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 14px 16px;
 }
 
 .typing-indicator span {
@@ -195,7 +200,7 @@
 /* Input Area */
 .doc-chatbot-input-area {
   padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: white;
   border-top: 1px solid var(--border-color);
   display: flex;
   gap: 8px;
@@ -214,19 +219,15 @@
 }
 
 .doc-chatbot-input-area input:focus {
-  border-color: var(--cc-accent);
-}
-
-.doc-chatbot-input-area input:disabled {
-  opacity: 0.6;
+  border-color: var(--clinical-blue);
 }
 
 .doc-chatbot-input-area button {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--cc-accent);
-  color: black;
+  background: var(--clinical-blue);
+  color: white;
   border: none;
   display: flex;
   align-items: center;
@@ -237,13 +238,6 @@
 }
 
 .doc-chatbot-input-area button:hover:not(:disabled) {
-  opacity: 0.9;
+  background: #1d4ed8;
   transform: scale(1.05);
-}
-
-.doc-chatbot-input-area button:disabled {
-  background: var(--surface-bg);
-  color: var(--text-muted);
-  border: 1px solid var(--border-color);
-  cursor: not-allowed;
 }

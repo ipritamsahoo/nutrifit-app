@@ -13,13 +13,18 @@ import random
 import time
 import threading
 import hashlib
+from typing import List, Optional, Any, Dict
 from openai import OpenAI
 from dotenv import load_dotenv
 from exercise_utils import sanitize_plan_workouts
+from gemini_service import _build_fallback_plan, generate_compact_plan
 
 load_dotenv()
 
-_MODEL_NAME = "stepfun/step-3.5-flash:free"
+# Split models: Use stepfun for chat, but a blazing fast model for heavy JSON plan gen
+_CHAT_MODEL = "stepfun/step-3.5-flash:free"
+_PLAN_MODEL = "google/gemini-2.0-flash-lite-preview-02-05:free"
+
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 _EXERCISES_DIR = os.path.join(_BASE_DIR, "exercises")
 
@@ -57,6 +62,221 @@ client_plan = OpenAI(
 
 # Simple memory cache for background tasks during a user's session
 _session_store = {}
+
+_QUESTION_FLOW = [
+    "Great! Let's begin with some basics.\n\n1. What's your age?",
+    "2. What's your height in cm?",
+    "3. What's your weight in kg?",
+    "4. What's your main goal? Choose one: BUILD_MUSCLE, LOSE_WEIGHT, STAY_FIT, or FLEXIBILITY.",
+    "5. What type of equipment do you have? Choose one: NO_EQUIPMENT or WITH_EQUIPMENT.",
+    "6. Do you have any medical problems, pain, or injuries? If none, just say 'none'.",
+    "7. Which specific body parts or areas would you like to focus on? For example: Chest, Back, Legs, Core, or Full Body.",
+    "8. What's your food preference? Veg or Non-Veg?",
+    "How much water do you usually drink in a day?",
+    "How many hours of sleep do you usually get?",
+    "Do you have a mostly sitting desk job or are you active during the day?",
+    "Last one: how are your stress levels lately?",
+]
+
+
+def _new_session_state() -> dict:
+    return {
+        "filtered_exercises": "Push Up, Bodyweight Squat, Glute Bridge, Dead Bug",
+        "plan_json": None,
+        "filtering_done": False,
+        "filtering_started": False,
+        "plan_done": False,
+        "plan_started": False,
+        "plan_delivered": False,
+        "profile": None,
+    }
+
+
+def _ensure_session(session_id: str, reset: bool = False) -> dict:
+    if reset or session_id not in _session_store:
+        print(f"[Chat] Initializing session for {session_id}")
+        _session_store[session_id] = _new_session_state()
+    return _session_store[session_id]
+
+
+def _looks_like_json_object(text: str | None) -> bool:
+    return bool(isinstance(text, str) and text.strip().startswith("{") and text.strip().endswith("}"))
+
+
+def _get_next_prompt(answer_count: int) -> str:
+    if answer_count < 0:
+        answer_count = 0
+    if answer_count >= len(_QUESTION_FLOW):
+        return _QUESTION_FLOW[-1]
+    return _QUESTION_FLOW[answer_count]
+
+
+def _build_plan_ready_response(plan_json: Optional[str]) -> str:
+    """Safely build a response string containing the JSON plan."""
+    content = plan_json if plan_json else "{}"
+    return f"Your personalized plan is completely ready! Here it is:\n\n```json\n{content}\n```"
+
+
+def _finalize_plan_for_chat(session_id: str, profile: dict) -> str:
+    session = _ensure_session(session_id)
+    cached_plan = session.get("plan_json")
+
+    if _looks_like_json_object(cached_plan):
+        session["plan_delivered"] = True
+        return _build_plan_ready_response(str(cached_plan))
+
+    if not session.get("plan_started"):
+        _start_plan_generation_background(session_id, profile)
+
+    print(f"[Chat] Finalizing plan for {session_id}...")
+    for _ in range(12):
+        time.sleep(0.5)
+        cached_plan = session.get("plan_json")
+        if session.get("plan_done") and _looks_like_json_object(cached_plan):
+            session["plan_delivered"] = True
+            return _build_plan_ready_response(str(cached_plan))
+
+    print(f"[Chat] Plan not ready in time for {session_id}. Using fallback compact plan.")
+    fallback_plan = _build_fallback_plan(
+        age=profile["age"],
+        weight=profile["weight"],
+        height=profile["height"],
+        goal=profile["goal"],
+        medical_conditions=profile["medical_conditions"],
+        diet_preference=profile.get("diet_preference", ""),
+    )
+    fallback_json = json.dumps(fallback_plan, ensure_ascii=False)
+    session["plan_json"] = fallback_json
+    session["plan_done"] = True
+    session["plan_delivered"] = True
+    return _build_plan_ready_response(fallback_json)
+
+
+def _extract_user_answers(messages: list[dict]) -> list[str]:
+    answers: list[str] = []
+    for msg in messages:
+        if msg.get("role") != "user":
+            continue
+        parts = msg.get("parts") or []
+        if not parts:
+            continue
+        text = str(parts[0]).strip()
+        if text:
+            answers.append(text)
+    return answers
+
+
+def _extract_number(text: str, default: float) -> float:
+    match = re.search(r"(\d+(?:\.\d+)?)", text or "")
+    return float(match.group(1)) if match else float(default)
+
+
+def _normalize_goal(goal: str) -> str:
+    value = (goal or "").strip().upper().replace(" ", "_")
+    if "FLEX" in value:
+        return "FLEXIBILITY"
+    if "MUSCLE" in value or "BULK" in value or "GAIN" in value:
+        return "BUILD_MUSCLE"
+    if "LOSE" in value or "WEIGHT" in value or "FAT" in value:
+        return "LOSE_WEIGHT"
+    if value == "STAY_FIT":
+        return value
+    return "STAY_FIT"
+
+
+def _normalize_equipment(equipment: str) -> str:
+    value = (equipment or "").strip().upper().replace(" ", "_")
+    if "WITH" in value or "DUMBBELL" in value or "MACHINE" in value or "BARBELL" in value:
+        return "WITH_EQUIPMENT"
+    if "NO" in value or "BODYWEIGHT" in value:
+        return "NO_EQUIPMENT"
+    return "NO_EQUIPMENT"
+
+
+def _extract_targets(text: str) -> list[str]:
+    raw_parts = re.split(r",| and | & ", text or "", flags=re.IGNORECASE)
+    targets = [part.strip() for part in raw_parts if part.strip()]
+    return targets or ["Full Body"]
+
+
+def _extract_profile_from_messages(messages: list[dict]) -> dict | None:
+    answers = _extract_user_answers(messages)
+    if len(answers) < 7:
+        return None
+
+    return {
+        "answer_count": len(answers),
+        "age": int(round(_extract_number(answers[0], 25))),
+        "height": _extract_number(answers[1], 170),
+        "weight": _extract_number(answers[2], 70),
+        "goal": _normalize_goal(answers[3] if len(answers) > 3 else "STAY_FIT"),
+        "equipment": _normalize_equipment(answers[4] if len(answers) > 4 else "NO_EQUIPMENT"),
+        "medical_conditions": answers[5] if len(answers) > 5 else "",
+        "targets": _extract_targets(answers[6] if len(answers) > 6 else "Full Body"),
+        "diet_preference": answers[7] if len(answers) > 7 else "",
+    }
+
+
+def _start_filtering_background(session_id: str, profile: dict) -> None:
+    session = _session_store[session_id]
+    if session.get("filtering_started"):
+        return
+
+    session["filtering_started"] = True
+
+    def filter_task():
+        print(f"[Filter] Starting task for {session_id} targets: {profile['targets']}")
+        try:
+            session["filtered_exercises"] = _get_filtered_exercises(
+                profile["goal"],
+                profile["equipment"],
+                profile["targets"],
+            )
+        except Exception as exc:
+            print(f"[Filter] Task failed for {session_id}: {exc}")
+            session["filtered_exercises"] = "Push Up, Bodyweight Squat, Glute Bridge, Dead Bug"
+        finally:
+            session["filtering_done"] = True
+            print(f"[Filter] Task COMPLETE for {session_id}. Data ready.")
+
+    threading.Thread(target=filter_task, daemon=True).start()
+
+
+def _start_plan_generation_background(session_id: str, profile: dict) -> None:
+    session = _session_store[session_id]
+    if session.get("plan_started"):
+        return
+
+    session["plan_started"] = True
+
+    def generate_task():
+        print(f"[Generator] Compact plan task started for {session_id}...")
+        try:
+            result = generate_compact_plan(
+                age=profile["age"],
+                weight=profile["weight"],
+                height=profile["height"],
+                goal=profile["goal"],
+                medical_conditions=profile["medical_conditions"],
+                diet_preference=profile.get("diet_preference", ""),
+            )
+            session["plan_json"] = json.dumps(result["plan"], ensure_ascii=False)
+        except Exception as exc:
+            print(f"[Generator] Compact plan task failed for {session_id}: {exc}")
+            result = generate_compact_plan(
+                age=25,
+                weight=70,
+                height=170,
+                goal="STAY_FIT",
+                medical_conditions="",
+                diet_preference=profile.get("diet_preference", ""),
+            )
+            session["plan_json"] = json.dumps(result["plan"], ensure_ascii=False)
+        finally:
+            session["plan_done"] = True
+            print(f"[Generator] Task COMPLETE for {session_id}. Plan ready.")
+
+    threading.Thread(target=generate_task, daemon=True).start()
 
 def get_chat_system_prompt() -> str:
     """Lightweight prompt for the conversational stage."""
@@ -102,23 +322,43 @@ CRITICAL RULES:
 """
 
 def get_generation_system_prompt(valid_exercises: str) -> str:
-    """Minimized prompt to save tokens."""
-    return f"""You are a fitness plan generator. Output ONLY a valid 7-day JSON object.
-    
-    EXERCISES:
-    - ONLY use names from this list: {valid_exercises}
-    - Exactly 4 exercises per workout day.
-    
-    OUTPUT RULES:
-    - ONLY valid JSON. No conversational text.
-    - Meal names < 5 words.
-    - Notes < 15 words.
-    
-    JSON: {{
-      "diet_plan": {{ "day_1": {{ "breakfast": {{"meal": "...", "calories": 0}}, "lunch": {{...}}, "dinner": {{...}}, "snacks": {{...}} }}, ... }},
-      "workout_plan": {{ "day_1": {{ "exercises": [{{"name": "NAME", "sets": 3, "reps": 12, "target_muscle": "..."}}], "duration_minutes": 45 }}, ... }},
-      "daily_calories_target": 2000, "daily_water_liters": 2.5, "notes": "..."
-    }}"""
+    """Ultra-restricted prompt for Stage 2 plan generation."""
+    return f"""### ROLE: EXPERT FITNESS JSON GENERATOR
+### CORE DIRECTIVE: Output ONLY a valid 7-day JSON object. EXACTLY as specified.
+### ABSOLUTE CONSTRAINTS (STRICT OBEDIENCE REQUIRED):
+1. **EXERCISES**: 
+   - USE ONLY NAMES FROM THIS LIST: {valid_exercises}
+   - DO NOT hallucinate, invent, or suggest ANY exercise not on the list.
+   - EXACTLY 4 exercises per workout day.
+2. **FORMAT**: 
+   - OUTPUT 100% VALID JSON ONLY. No markdown triple backticks. No conversational text. No intro/outro.
+3. **CONTENT**: 
+   - STRICT MINIMALISM: Keep all text extremely short to save tokens and speed up generation.
+   - Meal names MUST be 2-3 words max (e.g., "Oatmeal", "Chicken Rice").
+   - NO notes, NO descriptions. Keep it incredibly brief and fast.
+
+### JSON STRUCTURE TEMPLATE:
+{{
+  "diet_plan": {{ 
+    "day_1": {{ 
+      "breakfast": {{"meal": "...", "calories": 0}}, 
+      "lunch": {{"meal": "...", "calories": 0}}, 
+      "dinner": {{"meal": "...", "calories": 0}}, 
+      "snacks": {{"meal": "...", "calories": 0}} 
+    }}, ... 
+  }},
+  "workout_plan": {{ 
+    "day_1": {{ 
+      "exercises": [
+        {{"name": "...", "sets": 3, "reps": 12, "target_muscle": "..."}}, ...
+      ], 
+      "duration_minutes": 45 
+    }}, ... 
+  }},
+  "daily_calories_target": 2000, 
+  "daily_water_liters": 2.5, 
+  "notes": "..."
+}}"""
 
 def _get_filtered_exercises(goal: str, equipment: str, targets: list[str]) -> str:
     """Read JSON files from the structured folders and return a combined list of names."""
@@ -133,6 +373,28 @@ def _get_filtered_exercises(goal: str, equipment: str, targets: list[str]) -> st
         print(f"[Chat] Warning: Folder {equip_dir} not found. Falling back to STAY_FIT/NO_EQUIPMENT")
         equip_dir = os.path.join(_EXERCISES_DIR, "STAY_FIT", "NO_EQUIPMENT")
         goal_norm, equip_norm = "STAY_FIT", "NO_EQUIPMENT" # For logging below
+ 
+    # Common synonyms for muscles to improve matching
+    SYNONYMS = {
+        "abs": ["abdominals", "lower abdominals", "upper abdominals", "obliques"],
+        "hand": ["forearms", "biceps", "triceps", "wrists"],
+        "hands": ["forearms", "biceps", "triceps", "wrists"],
+        "glutes": ["gluteus maximus", "gluteus medius", "glutes"],
+        "quads": ["quads", "inner quadriceps", "outer quadricep", "rectus femoris"],
+        "back": ["lower back", "lats", "traps", "traps (mid-back)"],
+        "shoulders": ["shoulders", "anterior deltoid", "lateral deltoid", "posterior deltoid", "front shoulders", "rear shoulders"],
+        "shoulder": ["shoulders", "anterior deltoid", "lateral deltoid", "posterior deltoid", "front shoulders", "rear shoulders"],
+        "neck": ["traps", "upper traps"],
+        "legs": ["quads", "hamstrings", "calves", "glutes", "inner thigh"],
+        "leg": ["quads", "hamstrings", "calves", "glutes", "inner thigh"],
+        "core": ["abdominals", "obliques", "lower back", "lower abdominals", "upper abdominals"],
+        "chest": ["chest", "mid and lower chest", "upper chest"],
+        "arms": ["biceps", "triceps", "forearms", "lateral head triceps", "medial head triceps"],
+        "arm": ["biceps", "triceps", "forearms"],
+        "bicep": ["biceps"],
+        "tricep": ["triceps", "lateral head triceps", "medial head triceps"],
+        "calf": ["calves", "gastrocnemius", "tibialis"],
+    }
 
     all_names = []
     
@@ -166,14 +428,24 @@ def _get_filtered_exercises(goal: str, equipment: str, targets: list[str]) -> st
         if os.path.exists(equip_dir):
             available_files = {f.lower(): f for f in os.listdir(equip_dir) if f.endswith(".json")}
             for target in processed_targets:
-                target_lower = f"{target.strip().lower()}.json"
-                if target_lower in available_files:
-                    filepath = os.path.join(equip_dir, available_files[target_lower])
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        names = json.load(f)
-                        all_names.extend(names)
-                else:
-                    print(f"[Chat] Warning: Target file {target} not found in {equip_dir}.")
+                t_lower = target.strip().lower()
+                # Check directly or via synonyms
+                search_terms = {t_lower}
+                if t_lower in SYNONYMS:
+                    search_terms.update(SYNONYMS[t_lower])
+                
+                found_for_target = False
+                for term in search_terms:
+                    filename = f"{term}.json"
+                    if filename in available_files:
+                        filepath = os.path.join(equip_dir, available_files[filename])
+                        with open(filepath, "r", encoding="utf-8") as f:
+                            names = json.load(f)
+                            all_names.extend(names)
+                        found_for_target = True
+                
+                if not found_for_target:
+                    print(f"[Chat] Warning: No match found for target '{target}' (searched: {search_terms})")
 
     unique_names = list(set(all_names))
     
@@ -202,13 +474,12 @@ def _generate_plan(user_summary: str, valid_exercises: str) -> str:
     print(f"[Chat] Stage 2: Generating plan with {len(valid_exercises.split(','))} exercises...")
     try:
         response = client_plan.chat.completions.create(
-            model=_MODEL_NAME,
+            model=_PLAN_MODEL,
             messages=[
                 {"role": "system", "content": get_generation_system_prompt(valid_exercises)},
                 {"role": "user", "content": f"User Profile: {user_summary}"}
             ],
-            temperature=0.3,
-            response_format={"type": "json_object"}
+            temperature=0.1 # Lower temp makes it generate faster and stick strictly to JSON format
         )
         result = response.choices[0].message.content or ""
         print(f"[Chat] Stage 2 Result (first 200 chars): {result[:200]}")
@@ -218,159 +489,33 @@ def _generate_plan(user_summary: str, valid_exercises: str) -> str:
         return ""
 
 def chat_with_coach(messages: list[dict], uid: str = "default_session") -> str:
-    """Handels Stage 1 (Chat) and triggers Stage 2 (Generation) if [PLAN_READY] detected."""
-    # Use the actual user ID to keep background generation safe for multiple users
+    """Backend-controlled chat flow with background plan generation."""
     session_id = uid
-            
-    # Reset the session state if this is a brand new conversation (only the greeting or first msg)
-    if session_id not in _session_store or len(messages) <= 2:
-        print(f"[Chat] Initializing/Resetting session for {session_id}")
-        _session_store[session_id] = {
-            "filtered_exercises": "Pushups, Squats, Lunges", 
-            "plan_json": None, 
-            "filtering_done": False, 
-            "plan_done": False
-        }
+    answers = _extract_user_answers(messages)
+    session = _ensure_session(session_id, reset=not answers)
+    answer_count = len(answers)
 
-    # Convert frontend format to OpenAI format
-    cleaned: list[dict[str, str]] = []
-    initial_greeting = None
-    for msg in messages:
-        role = "assistant" if msg["role"] == "model" else "user"
-        content = msg["parts"][0]
-        if initial_greeting is None and role == "assistant":
-            initial_greeting = content
-            continue
-        cleaned.append({"role": role, "content": str(content)})
+    profile = _extract_profile_from_messages(messages)
+    if profile:
+        session["profile"] = profile
 
-    # Regular chat call
-    openai_messages: list[dict[str, str]] = [{"role": "system", "content": get_chat_system_prompt()}]
-    if initial_greeting:
-        openai_messages.append({"role": "user", "content": "Hello!"})
-        openai_messages.append({"role": "assistant", "content": str(initial_greeting)})
-    openai_messages.extend(cleaned[-30:])  # type: ignore # last 30 turns
+    if profile and answer_count >= 7:
+        _start_filtering_background(session_id, profile)
 
-    # CRITICAL FIX for "1 minute loading" on the first request:
-    # OpenRouter API hangs if the very last message in the array is from the 'assistant'.
-    # If the user just opened the chat (only the greeting is present), we inject a hidden 
-    # user prompt to force the AI to ask the first assessment question instantly.
-    if openai_messages and openai_messages[-1]["role"] == "assistant":
-        openai_messages.append({"role": "user", "content": "I am ready, let's start!"})
+    if profile and answer_count >= 8:
+        _start_plan_generation_background(session_id, profile)
 
-    try:
-        response = client.chat.completions.create(
-            model=_MODEL_NAME,
-            messages=openai_messages,
-            temperature=0.7
-        )
-        ai_response = response.choices[0].message.content or ""
-        
-        # Background Trigger 1: START_FILTERING
-        if "[START_FILTERING]" in ai_response:
-            print(f"[Chat] Background Filtering Triggered for {session_id}...")
-            goal = re.search(r"Goal:\s*([^,]+)", ai_response)
-            equip = re.search(r"Equipment:\s*([^,]+)", ai_response)
-            targets = re.search(r"Targets:\s*([^\n]+)", ai_response)
-            
-            g_str = goal.group(1).strip() if goal else "STAY_FIT"
-            e_str = equip.group(1).strip() if equip else "NO_EQUIPMENT"
-            t_list = [t.strip() for t in targets.group(1).split(",")] if targets else ["Full Body"]
-            
-            def filter_task():
-                print(f"[Filter] Starting task for {session_id} targets: {t_list}")
-                _session_store[session_id]["filtered_exercises"] = _get_filtered_exercises(g_str, e_str, t_list)
-                _session_store[session_id]["filtering_done"] = True
-                print(f"[Filter] Task COMPLETE for {session_id}. Data ready.")
-                
-            threading.Thread(target=filter_task).start()
-            # Remove the secret tag so the user doesn't see it
-            ai_response = re.sub(r"\[START_FILTERING\].*?(?:\n|$)", "", ai_response, count=1).strip()
-            
-        # Background Trigger 2: START_PLAN_GEN
-        if "[START_PLAN_GEN]" in ai_response:
-            print(f"[Chat] Background Plan Generation Triggered for {session_id}...")
-            summary_match = re.search(r"Summary:\s*([^\n]+)", ai_response)
-            summary_str = summary_match.group(1).strip() if summary_match else ai_response
-            
-            def generate_task():
-                # Wait up to 60s for filtering to finish
-                print(f"[Generator] Task started. Waiting for filtering_done for {session_id}...")
-                for _ in range(120):
-                    if _session_store[session_id]["filtering_done"]: break
-                    time.sleep(0.5)
-                
-                valid_ex = str(_session_store[session_id].get("filtered_exercises", ""))
-                print(f"[Generator] Wait over. Exercises ready: {len(valid_ex.split(','))} found. Calling Stage 2...")
-                _session_store[session_id]["plan_json"] = _generate_plan(summary_str, valid_ex)
-                _session_store[session_id]["plan_done"] = True
-                print(f"[Generator] Task COMPLETE for {session_id}. Plan ready.")
-                
-            threading.Thread(target=generate_task).start()
-            ai_response = re.sub(r"\[START_PLAN_GEN\].*?(?:\n|$)", "", ai_response, count=1).strip()
+    if profile and answer_count >= 12:
+        return _finalize_plan_for_chat(session_id, profile)
 
-        # Final Trigger: PLAN_READY
-        if "[PLAN_READY]" in ai_response:
-            print(f"[Chat] PLAN_READY detected for {session_id}. Delivering plan...")
-            # Give it up to 60 seconds (120 * 0.5s) to let the long generation finish,
-            # especially if the user speeded through the filler questions!
-            for _ in range(120):
-                if _session_store[session_id].get("plan_done"): break
-                time.sleep(0.5)
-                
-            plan_json = _session_store[session_id]["plan_json"]
-            if plan_json:
-                return f"Your personalized plan is completely ready! Here it is:\n\n```json\n{plan_json}\n```"
-            else:
-                # ── FALLBACK: Triggers were missed, generate plan synchronously ──
-                print(f"[Chat] FALLBACK: plan_json is None for {session_id}. Generating synchronously...")
-                
-                # Parse the full conversation to extract user profile
-                full_text = " ".join([m.get("content", "") for m in openai_messages if m["role"] in ("user", "assistant")])
-                
-                # Extract goal
-                goal_match = re.search(r"(?:goal|objective)[:\s]*(build.?muscle|lose.?weight|stay.?fit|flexibility)", full_text, re.I)
-                fallback_goal = goal_match.group(1).strip().upper().replace(" ", "_") if goal_match else "STAY_FIT"
-                # Normalize common variations
-                if "BUILD" in fallback_goal and "MUSCLE" in fallback_goal: fallback_goal = "BUILD_MUSCLE"
-                elif "LOSE" in fallback_goal and "WEIGHT" in fallback_goal: fallback_goal = "LOSE_WEIGHT"
-                elif "STAY" in fallback_goal and "FIT" in fallback_goal: fallback_goal = "STAY_FIT"
-                
-                # Extract equipment
-                equip_match = re.search(r"(?:equipment|gym)[:\s]*(no.?equipment|with.?equipment|yes|no)", full_text, re.I)
-                if equip_match:
-                    eq_raw = equip_match.group(1).strip().lower()
-                    fallback_equip = "NO_EQUIPMENT" if "no" in eq_raw else "WITH_EQUIPMENT"
-                else:
-                    fallback_equip = "NO_EQUIPMENT"
-                
-                # Extract targets
-                target_match = re.search(r"(?:focus|target|body.?part|areas?)[:\s]*([^\n.?!]+)", full_text, re.I)
-                fallback_targets = [t.strip() for t in target_match.group(1).split(",") if t.strip()] if target_match else ["Full Body"]
-                
-                print(f"[Chat] FALLBACK parsed => Goal={fallback_goal}, Equip={fallback_equip}, Targets={fallback_targets}")
-                
-                # Run filtering
-                valid_exercises = _get_filtered_exercises(fallback_goal, fallback_equip, fallback_targets)
-                if not valid_exercises:
-                    valid_exercises = "Pushups, Squats, Lunges, Planks, Crunches, Jumping Jacks, Burpees, Mountain Climbers"
-                
-                # Build a summary from conversation
-                user_msgs = [m.get("content", "") for m in openai_messages if m["role"] == "user"]
-                summary = f"Goal: {fallback_goal}, Equipment: {fallback_equip}, Targets: {', '.join(fallback_targets)}. User said: {'; '.join(user_msgs[-5:])}"
-                
-                # Generate plan synchronously
-                plan_result = _generate_plan(summary, valid_exercises)
-                if plan_result:
-                    _session_store[session_id]["plan_json"] = plan_result
-                    _session_store[session_id]["plan_done"] = True
-                    return f"Your personalized plan is completely ready! Here it is:\n\n```json\n{plan_result}\n```"
-                else:
-                    return "I'm having trouble generating your plan right now. Let me try once more — could you tell me your fitness goal again? (e.g., Build Muscle, Lose Weight, Stay Fit)"
-            
-        return ai_response
-    except Exception as e:
-        print(f"[Chat] API Error: {e}")
-        return "I'm sorry, I'm having trouble connecting to my brain right now. Please try again soon!"
+    if session.get("plan_delivered"):
+        cached_plan = session.get("plan_json")
+        if _looks_like_json_object(cached_plan):
+            return _build_plan_ready_response(cached_plan)
+
+    next_prompt = _get_next_prompt(answer_count)
+    print(f"[Chat] Sending backend prompt for {session_id}: step={answer_count + 1}")
+    return next_prompt
 
 def extract_plan_from_response(text: str) -> dict | None:
     """Parses JSON from AI response."""
@@ -387,9 +532,16 @@ def extract_plan_from_response(text: str) -> dict | None:
     
     if json_match:
         try:
-            raw = json_match.group(1)
-            print(f"[Extract] Found JSON (first 200 chars): {raw[:200]}")
+            raw = str(json_match.group(1))
+            print(f"[Extract] Found JSON (first 200 chars): {str(raw)[:200]}")
             plan = json.loads(raw)
+            if (
+                isinstance(plan, dict)
+                and isinstance(plan.get("sched"), list)
+                and isinstance(plan.get("tpl"), dict)
+            ):
+                print("[Extract] SUCCESS: Compact plan detected!")
+                return plan
             if "diet_plan" in plan and "workout_plan" in plan:
                 print("[Extract] SUCCESS: Plan has diet_plan and workout_plan!")
                 return sanitize_plan_workouts(plan)

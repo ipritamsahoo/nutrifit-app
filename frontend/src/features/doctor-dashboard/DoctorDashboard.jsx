@@ -221,7 +221,7 @@ export default function DoctorDashboard() {
   if (authLoading || (currentUser && loadingPatients)) return (
     <div className="cmd-loading" style={{ 
       height: '100vh', width: '100%', display: 'flex', alignItems: 'center', 
-      justifyContent: 'center', background: '#0a0a0a', color: '#6366f1' 
+      justifyContent: 'center', background: '#f8fafc', color: '#2563eb' 
     }}>
       <div className="cmd-spinner" style={{
         width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)',
