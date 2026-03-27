@@ -57,7 +57,7 @@ export default function UserWorkspace() {
   const [isDietDetailOpen, setIsDietDetailOpen] = useState(false);
   const [workoutViewState, setWorkoutViewState] = useState('list'); // 'list', 'demo', 'live'
   const [selectedExercise, setSelectedExercise] = useState(null);
-  const [activeAngle, setActiveAngle] = useState('front');
+  const [showSideBySide, setShowSideBySide] = useState(false);
   const [activeDay, setActiveDay] = useState(null); // For progress chart tooltip
 
   // --- CAMERA STATE ---
@@ -80,69 +80,79 @@ export default function UserWorkspace() {
   const [completedWorkouts, setCompletedWorkouts] = useState([]);
 
   // --- DATA MAPPING (Moved Up to avoid ReferenceErrors) ---
+  // Helper: normalize a V2 meals array into a V1-compatible object
+  const normalizeV2Meals = (mealsArr) => {
+    if (!Array.isArray(mealsArr)) return mealsArr;
+    const result = {};
+    mealsArr.forEach(m => {
+      if (typeof m === 'string') {
+        // Format: "mealType:MealName|Calories"
+        const colonIdx = m.indexOf(':');
+        if (colonIdx > 0) {
+          const mealType = m.slice(0, colonIdx).toLowerCase();
+          const rest = m.slice(colonIdx + 1);
+          const [foodName, cal] = rest.split('|');
+          result[mealType] = cal ? `${foodName.trim()} (${cal.trim()} cal)` : foodName.trim();
+        } else {
+          result[`meal_${Object.keys(result).length + 1}`] = m;
+        }
+      } else if (m && typeof m === 'object') {
+        const mealType = (m.meal_type || `meal_${Object.keys(result).length + 1}`).toLowerCase();
+        const name = m.name || m.meal || '';
+        result[mealType] = m.cal ? `${name} (${m.cal} cal)` : name;
+      }
+    });
+    return result;
+  };
+
   const todayDiet = useMemo(() => {
     const dj = plan?.diet_json;
     if (!dj || Object.keys(dj).length === 0) return null;
-
-    // V2 Schema Support
-    if (dj.days && dj.days[todayKey]) {
-      const dayMeals = dj.days[todayKey];
-      if (Array.isArray(dayMeals)) {
-        const mappedMeals = {};
-        dayMeals.forEach(mealStr => {
-           const colonIdx = mealStr.indexOf(':');
-           if (colonIdx !== -1) {
-             const slot = mealStr.substring(0, colonIdx);
-             const rest = mealStr.substring(colonIdx + 1);
-             const parts = rest.split('|');
-             const name = parts[0] || rest;
-             const cal = parts[1] || '';
-             mappedMeals[slot] = cal ? `${name} (${cal} kcal)` : name;
-           }
-        });
-        return mappedMeals;
-      }
-    }
-
+    // V2 Schema: diet_json.days.day_X (array of meal strings/objects)
+    if (dj.days?.[todayKey]) return normalizeV2Meals(dj.days[todayKey]);
+    // V2 Schema: diet_json.meals (default/day_1 meals array)
+    if (Array.isArray(dj.meals)) return normalizeV2Meals(dj.meals);
+    // V1 Schema: diet_json.day_X
     if (dj[todayKey]) return dj[todayKey];
     if (dj.plan) return dj.plan;
     if (dj.breakfast || dj.lunch || dj.dinner || dj.Breakfast || dj.Lunch || dj.Dinner) return dj;
-    return dj;
+    // V2 fallback: if days exist but not for todayKey, use first available day or meals
+    if (dj.days) {
+      const firstDay = Object.values(dj.days)[0];
+      if (firstDay) return normalizeV2Meals(firstDay);
+    }
+    return null;
   }, [plan, todayKey]);
 
   const exercises = useMemo(() => {
     const wj = plan?.workout_json;
     if (!wj || Object.keys(wj).length === 0) return [];
-    
-    // V2 Schema Support
-    if (wj.sched && wj.tpl) {
-      const dayMatch = todayKey.match(/day_(\d+)/);
-      const dayIndex = dayMatch ? parseInt(dayMatch[1], 10) - 1 : 0;
-      const validIndex = Math.max(0, Math.min(6, dayIndex));
-      
-      const scheduleKey = wj.sched[validIndex];
-      if (scheduleKey === 'REST' || !scheduleKey) {
-        return [{ name: 'Rest & Recovery', sets: 0, reps: 0 }];
-      }
-      
-      const template = wj.tpl[scheduleKey];
-      if (!template || !template.ex) return [];
 
-      return template.ex.map((str, idx) => {
-        const parts = str.split('|');
-        const name = parts[0] || str;
-        const setsReps = parts[1] ? parts[1].split('x') : ['3', '12'];
-        return { 
-          id: `ex_${idx}`, 
-          name: name.trim(), 
-          sets: setsReps[0] || 3, 
-          reps: setsReps[1] || 12,
-          target_muscle: template.focus ? template.focus.join(', ') : 'General',
-          instructions: `Rest ${parts[2] ? parts[2].replace('r', '') : '60'}s between sets.`
-        };
-      });
+    // V2 Schema: sched (day→template key map) + tpl (template definitions)
+    if (wj.sched && wj.tpl) {
+      const dayIndex = parseInt(todayKey.replace('day_', '')) - 1; // day_1 → 0
+      const templateKey = wj.sched[dayIndex];
+      if (templateKey && wj.tpl[templateKey]?.ex) {
+        return wj.tpl[templateKey].ex.map(str => {
+          if (typeof str !== 'string') return str; // already an object
+          const parts = str.split('|');
+          const name = parts[0] || str;
+          const setsReps = parts[1] ? parts[1].split('x') : ['3', '10'];
+          return {
+            name,
+            sets: setsReps[0] || 3,
+            reps: setsReps[1] || 10,
+            target_muscle: parts[2] || ''
+          };
+        });
+      }
+      // If template is a rest/mobility key with no exercises
+      if (templateKey === 'M' || templateKey === 'R') {
+        return [{ name: 'Rest & Recovery', sets: '-', reps: '-', target_muscle: 'Recovery' }];
+      }
     }
 
+    // V1 Schema fallbacks
     if (wj[todayKey]?.exercises) return wj[todayKey].exercises;
     if (wj.plan?.exercises) return wj.plan.exercises;
     if (Array.isArray(wj.exercises)) return wj.exercises;
@@ -280,19 +290,26 @@ export default function UserWorkspace() {
 
   // Prefetch MuscleWiki media
   useEffect(() => {
-    if (!exercises || exercises.length === 0 || exercises[0].name === 'Rest & Recovery') return;
+    if (!plan || !plan.workout_json) return;
     const abortController = new AbortController();
     const signal = abortController.signal;
 
     async function runSequentalPrefetch() {
-      for (const ex of exercises) {
+      // Resolve exercises using the same logic as resolveWorkout
+      const wj = plan.workout_json;
+      let exList = [];
+      if (wj[todayKey]?.exercises) exList = wj[todayKey].exercises;
+      else if (wj.plan?.exercises) exList = wj.plan.exercises;
+      else if (Array.isArray(wj.exercises)) exList = wj.exercises;
+
+      for (const ex of exList) {
         if (signal.aborted) return;
         if (ex.name) await prefetchMuscleWikiVideo(ex.name);
       }
     }
     runSequentalPrefetch();
     return () => abortController.abort();
-  }, [exercises]);
+  }, [plan, todayKey]);
 
   function handleLogout() {
     logout();
@@ -602,10 +619,9 @@ export default function UserWorkspace() {
   // --- WORKOUT VIEW ---
   const WorkoutView = () => {
     const handleProceed = async (ex) => {
-      console.log('[Proceed] Exercise clicked:', ex.name, ex);
       setSelectedExercise(ex);
       setWorkoutViewState('demo');
-      setActiveAngle('front');
+      setShowSideBySide(false);
       setDemoFrontLoaded(false);
       setDemoSideLoaded(false);
       setDemoFrontError(false);
@@ -613,7 +629,6 @@ export default function UserWorkspace() {
 
       // Auto-fetch video data
       if (muscleWikiCache[ex.name]) {
-        console.log('[Proceed] Cache HIT for:', ex.name, muscleWikiCache[ex.name]);
         setDemoVideoData(muscleWikiCache[ex.name]);
         setDemoVideoLoading(false);
         return;
@@ -622,23 +637,18 @@ export default function UserWorkspace() {
       setDemoVideoData(null);
       setDemoVideoLoading(true);
       try {
-        const url = `/musclewiki-video?name=${encodeURIComponent(ex.name)}`;
-        console.log('[Proceed] Fetching:', url);
-        const res = await fetch(url);
-        console.log('[Proceed] Response status:', res.status);
+        const res = await fetch(`/musclewiki-video?name=${encodeURIComponent(ex.name)}`);
         if (res.ok) {
           const data = await res.json();
-          console.log('[Proceed] API response:', JSON.stringify(data));
           if (data.found && data.videos) {
             muscleWikiCache[ex.name] = data;
             setDemoVideoData(data);
             return;
           }
         }
-        console.log('[Proceed] No video found for:', ex.name);
         setDemoVideoData(null);
       } catch (err) {
-        console.error('[Proceed] Error fetching demo video:', err);
+        console.error('Error fetching demo video:', err);
         setDemoVideoData(null);
       } finally {
         setDemoVideoLoading(false);
@@ -806,18 +816,8 @@ export default function UserWorkspace() {
     if (workoutViewState === 'demo') {
       const frontUrl = demoVideoData?.videos?.front || null;
       const sideUrl = demoVideoData?.videos?.side || null;
-      
       const hasFront = frontUrl && !demoFrontError;
       const hasSide = sideUrl && !demoSideError;
-
-      // Determine which angle is currently actively displayed
-      const currentUrl = activeAngle === 'front' ? frontUrl : sideUrl;
-      const currentLoaded = activeAngle === 'front' ? demoFrontLoaded : demoSideLoaded;
-      const currentError = activeAngle === 'front' ? demoFrontError : demoSideError;
-      const hasCurrent = currentUrl && !currentError;
-      
-      const setLoaded = activeAngle === 'front' ? setDemoFrontLoaded : setDemoSideLoaded;
-      const setErrorState = activeAngle === 'front' ? setDemoFrontError : setDemoSideError;
 
       return (
         <div className="workout-view-container workout-demo-container">
@@ -837,60 +837,71 @@ export default function UserWorkspace() {
               </div>
             </div>
 
-            <div className="video-layout video-layout--single" style={{ width: '100%' }}>
-              <div className="video-slot video-slot--full" style={{ position: 'relative', overflow: 'hidden', minHeight: '350px', borderRadius: '12px', background: '#0f172a' }}>
-                {(demoVideoLoading || (hasCurrent && !currentLoaded)) && (
-                  <div className="slot-loader" style={{ 
-                    position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', zIndex: 10, background: '#0f172a'
-                  }}>
+            <div className={`video-layout ${showSideBySide ? '' : 'video-layout--single'}`}>
+              {/* Front Video Slot */}
+              <div className={`video-slot ${showSideBySide && hasSide && demoSideLoaded ? 'video-slot--half' : 'video-slot--full'}`}>
+                {(demoVideoLoading || (hasFront && !demoFrontLoaded)) && (
+                  <div className="slot-loader">
                     <div className="slot-loader-spinner" />
-                    <span className="slot-loader-text" style={{ color: '#94a3b8', marginTop: 12 }}>{demoVideoLoading ? 'Locating workout data…' : 'Loading video…'}</span>
+                    <span className="slot-loader-text">{demoVideoLoading ? 'Locating workout data…' : 'Loading video…'}</span>
                   </div>
                 )}
-                {hasCurrent && (
+                {hasFront && (
                   <video
-                    key={currentUrl}
-                    src={currentUrl}
+                    src={frontUrl}
                     autoPlay loop muted playsInline preload="auto"
-                    referrerPolicy="no-referrer"
-                    style={{ 
-                      width: '100%', 
-                      minHeight: '350px',
-                      maxHeight: '500px',
-                      objectFit: 'contain',
-                      display: 'block',
-                      background: '#0f172a'
-                    }}
-                    onLoadedData={() => setLoaded(true)}
-                    onCanPlay={() => setLoaded(true)}
-                    onError={() => setErrorState(true)}
+                    style={{ display: demoFrontLoaded ? 'block' : 'none' }}
+                    onLoadedData={() => setDemoFrontLoaded(true)}
+                    onCanPlay={() => setDemoFrontLoaded(true)}
+                    onError={() => setDemoFrontError(true)}
                   />
                 )}
-                {!demoVideoLoading && !hasCurrent && (
-                  <div className="slot-empty" style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    minHeight: '350px', color: '#64748b'
-                  }}>
+                {!demoVideoLoading && !hasFront && !demoFrontLoaded && (
+                  <div className="slot-empty">
                     <PlayCircle size={48} className="play-icon" />
-                    <span className="slot-empty-text" style={{ marginTop: 12 }}>No video available</span>
+                    <span className="slot-empty-text">No video available</span>
                   </div>
                 )}
-                <div className="slot-label" style={{
-                  position: 'absolute', bottom: 8, left: 12, background: 'rgba(0,0,0,0.6)',
-                  color: '#fff', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600
-                }}>Angle: {activeAngle === 'front' ? 'Frontal' : 'Lateral'}</div>
+                <div className="slot-label">Angle 1: Frontal</div>
               </div>
+
+              {showSideBySide && (
+                <div className="video-slot video-slot--half" style={{ animation: 'slideInRight 0.5s ease-out' }}>
+                  {(hasSide && !demoSideLoaded) && (
+                    <div className="slot-loader">
+                      <div className="slot-loader-spinner" />
+                      <span className="slot-loader-text">Loading side view…</span>
+                    </div>
+                  )}
+                  {hasSide && (
+                    <video
+                      src={sideUrl}
+                      autoPlay loop muted playsInline preload="auto"
+                      style={{ display: demoSideLoaded ? 'block' : 'none' }}
+                      onLoadedData={() => setDemoSideLoaded(true)}
+                      onCanPlay={() => setDemoSideLoaded(true)}
+                      onError={() => setDemoSideError(true)}
+                    />
+                  )}
+                  {!hasSide && (
+                    <div className="slot-empty">
+                      <PlayCircle size={48} className="play-icon" />
+                      <span className="slot-empty-text">Side view unavailable</span>
+                    </div>
+                  )}
+                  <div className="slot-label">Angle 2: Lateral</div>
+                </div>
+              )}
             </div>
 
             <div className="demo-bottom-controls">
               {hasFront && hasSide && (
                 <button 
-                  onClick={() => setActiveAngle(activeAngle === 'front' ? 'side' : 'front')}
+                  onClick={() => setShowSideBySide(!showSideBySide)}
                   className="btn-toggle-angle"
                 >
                   <Maximize2 size={14} style={{ marginRight: 8 }} />
-                  View {activeAngle === 'front' ? 'Lateral' : 'Frontal'} Angle
+                  {showSideBySide ? 'Single View' : 'View Different Angle'}
                 </button>
               )}
               
@@ -938,20 +949,14 @@ export default function UserWorkspace() {
 
       // ── NORMAL LIVE MODE ──
       return (
-        <div className="workout-view-container">
-          <button onClick={handleBackToList} className="back-link">
-            <ArrowLeft size={18} style={{ marginRight: 8 }} /> Back to Routine
-          </button>
-
+        <div className="workout-live-layout">
           {/* Tracker Area */}
-          <div className="live-tracker-section">
+          <div className="live-tracker-column">
             <div className="tracker-stage">
               <button onClick={handleBackToList} className="tracker-stop-btn">
                 ✕ Stop & Save
               </button>
-              <button onClick={() => setIsFullscreen(true)} className="tracker-fullscreen-btn">
-                <Maximize2 size={14} /> Fullscreen
-              </button>
+
               <CameraView
                 embedded={true}
                 exerciseName={selectedExercise?.name}
@@ -961,35 +966,55 @@ export default function UserWorkspace() {
             </div>
           </div>
 
-          {/* Info Below Tracker */}
-          <div className="live-info-row">
-            <div className="rep-counter-card">
-              <div className="rep-label">Rep Counter</div>
-              <div className="rep-count">{String(liveRepCount).padStart(2, '0')} / {selectedExercise?.reps || '15'}</div>
-            </div>
+          {/* Info Column */}
+          <div className="live-info-column">
+            <button onClick={handleBackToList} className="back-link" style={{ marginBottom: '8px' }}>
+              <ArrowLeft size={18} style={{ marginRight: 8 }} /> Back to Routine
+            </button>
 
-            <div className="live-exercise-info-card">
-              <div className="rep-label">Current Exercise</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: 'white', marginTop: 4, lineHeight: 1.2 }}>{selectedExercise?.name}</div>
+            <div className="info-cards-row" style={{ display: 'flex', gap: '16px' }}>
+              <div className="rep-counter-card" style={{ flex: 1 }}>
+                <div className="rep-label">Rep Counter</div>
+                <div className="rep-count">{String(liveRepCount).padStart(2, '0')} / {selectedExercise?.reps || '15'}</div>
+              </div>
+
+              <div className="live-exercise-info-card" style={{ flex: 1 }}>
+                <div className="rep-label">Current Exercise</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: 'white', marginTop: 4, lineHeight: 1.2 }}>{selectedExercise?.name}</div>
+              </div>
             </div>
 
             {/* Reference Videos */}
             {(demoVideoData?.videos?.front || demoVideoData?.videos?.side) && (
               <div className="ref-card">
-                <h4 className="ref-label">Reference Videos</h4>
-                <div className="ref-videos-row">
-                  {demoVideoData?.videos?.front && (
-                    <div className="mini-video" style={{ overflow: 'hidden' }}>
-                      <video src={demoVideoData.videos.front} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <div className="video-tag">Front</div>
-                    </div>
+                <h4 className="ref-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Reference Video</span>
+                  {demoVideoData?.videos?.front && demoVideoData?.videos?.side && (
+                    <button 
+                      onClick={() => setShowSideBySide(!showSideBySide)}
+                      style={{
+                        background: 'rgba(37,99,235,0.1)', color: 'var(--clinical-blue)', border: 'none',
+                        padding: '8px 16px', borderRadius: '24px', fontSize: '12px', fontWeight: 'bold',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                      }}
+                    >
+                      <Maximize2 size={14} /> View Different Angle
+                    </button>
                   )}
-                  {demoVideoData?.videos?.side && (
-                    <div className="mini-video" style={{ overflow: 'hidden' }}>
-                      <video src={demoVideoData.videos.side} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <div className="video-tag">Side</div>
+                </h4>
+                <div className="ref-videos-row" style={{ display: 'block', height: '100%' }}>
+                  <div className="mini-video" style={{ overflow: 'hidden', height: '100%' }}>
+                    {/* If showSideBySide is true, show FRONT. If false, show SIDE. (Reusing existing state variable which defaults to false) */}
+                    <video 
+                      key={showSideBySide || !demoVideoData?.videos?.side ? 'front' : 'side'}
+                      src={(showSideBySide || !demoVideoData?.videos?.side) ? demoVideoData.videos.front : demoVideoData.videos.side} 
+                      autoPlay loop muted playsInline 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    />
+                    <div className="video-tag">
+                      {(showSideBySide || !demoVideoData?.videos?.side) ? 'Front Angle' : 'Side Angle'}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1020,100 +1045,106 @@ export default function UserWorkspace() {
   return (
     <div className="workspace-page clinical-theme">
       {/* ---------------- DESKTOP TOP NAVBAR ---------------- */}
-      <header className="desktop-navbar">
-        <div className="navbar-left">
-          <div className="brand-logo">
-            <Stethoscope className="text-blue" size={20} />
-          </div>
-          <div className="brand-text">
-            <h1 className="brand-name">NutriFit</h1>
-            <p className="brand-tag">Clinical Portal</p>
-          </div>
-        </div>
-
-        <nav className="navbar-center">
-          <button 
-            onClick={() => setActiveTab('home')}
-            className={`nav-btn ${activeTab === 'home' ? 'active' : ''}`}
-          >
-            <Home size={16} className="mr-2" />
-            <span>Dashboard</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('diet')}
-            className={`nav-btn ${activeTab === 'diet' ? 'active' : ''}`}
-          >
-            <Utensils size={16} className="mr-2" />
-            <span>Diet Plan</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('workout')}
-            className={`nav-btn ${activeTab === 'workout' ? 'active' : ''}`}
-          >
-            <Activity size={16} className="mr-2" />
-            <span>Therapy</span>
-          </button>
-        </nav>
-
-        <div className="navbar-right">
-          <button className="notif-btn">
-            <Bell size={16} />
-            <span className="notif-dot"></span>
-          </button>
-          <div className="user-profile-pill" onClick={handleLogout} title="Click to Logout">
-            <div className="pill-avatar">
-              <User size={14} />
+      {workoutViewState !== 'live' && (
+        <header className="desktop-navbar">
+          <div className="navbar-left">
+            <div className="brand-logo">
+              <Stethoscope className="text-blue" size={20} />
             </div>
-            <span className="pill-name">{userData?.name || "User"}</span>
-            <LogOut size={12} className="ml-2 opacity-50" />
+            <div className="brand-text">
+              <h1 className="brand-name">NutriFit</h1>
+              <p className="brand-tag">Clinical Portal</p>
+            </div>
           </div>
-        </div>
-      </header>
+
+          <nav className="navbar-center">
+            <button 
+              onClick={() => setActiveTab('home')}
+              className={`nav-btn ${activeTab === 'home' ? 'active' : ''}`}
+            >
+              <Home size={16} className="mr-2" />
+              <span>Dashboard</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('diet')}
+              className={`nav-btn ${activeTab === 'diet' ? 'active' : ''}`}
+            >
+              <Utensils size={16} className="mr-2" />
+              <span>Diet Plan</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('workout')}
+              className={`nav-btn ${activeTab === 'workout' ? 'active' : ''}`}
+            >
+              <Activity size={16} className="mr-2" />
+              <span>Therapy</span>
+            </button>
+          </nav>
+
+          <div className="navbar-right">
+            <button className="notif-btn">
+              <Bell size={16} />
+              <span className="notif-dot"></span>
+            </button>
+            <div className="user-profile-pill" onClick={handleLogout} title="Click to Logout">
+              <div className="pill-avatar">
+                <User size={14} />
+              </div>
+              <span className="pill-name">{userData?.name || "User"}</span>
+              <LogOut size={12} className="ml-2 opacity-50" />
+            </div>
+          </div>
+        </header>
+      )}
 
       {/* ---------------- MAIN CONTENT AREA ---------------- */}
       <div className="content-container">
         {/* MOBILE HEADER */}
-        <header className="mobile-header">
-          <div className="brand-logo">
-            <Stethoscope className="text-blue" size={20} />
-            <h1 className="brand-name ml-2">NutriFit</h1>
-          </div>
-          <button className="user-btn" onClick={handleLogout}><User size={16} /></button>
-        </header>
+        {workoutViewState !== 'live' && (
+          <header className="mobile-header">
+            <div className="brand-logo">
+              <Stethoscope className="text-blue" size={20} />
+              <h1 className="brand-name ml-2">NutriFit</h1>
+            </div>
+            <button className="user-btn" onClick={handleLogout}><User size={16} /></button>
+          </header>
+        )}
 
         {/* PAGE TITLE & DAY SWITCHER */}
-        <div className="page-header" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <h2 className="page-title">
-            {activeTab === 'home' ? 'Clinical Dashboard' : activeTab === 'diet' ? 'Nutrition Protocol' : 'Physical Therapy'}
-          </h2>
-          
-          {/* Day Switcher UI */}
-          {plan && activeTab !== 'home' && workoutViewState === 'list' && (
-            <div className="day-switcher" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-              {[1, 2, 3, 4, 5, 6, 7].map(d => (
-                <button 
-                  key={d}
-                  onClick={() => setTodayKey(`day_${d}`)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    border: '1px solid var(--clinical-blue-border, #bfdbfe)',
-                    background: todayKey === `day_${d}` ? 'var(--clinical-blue, #2563eb)' : '#fff',
-                    color: todayKey === `day_${d}` ? '#fff' : 'var(--clinical-blue, #2563eb)',
-                    fontWeight: 600,
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.2s ease',
-                    boxShadow: todayKey === `day_${d}` ? '0 2px 4px rgba(37,99,235,0.2)' : 'none'
-                  }}
-                >
-                  Day {d}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {workoutViewState !== 'live' && (
+          <div className="page-header" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h2 className="page-title">
+              {activeTab === 'home' ? 'Clinical Dashboard' : activeTab === 'diet' ? 'Nutrition Protocol' : 'Physical Therapy'}
+            </h2>
+            
+            {/* Day Switcher UI */}
+            {plan && workoutViewState === 'list' && (
+              <div className="day-switcher" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                {[1, 2, 3, 4, 5, 6, 7].map(d => (
+                  <button 
+                    key={d}
+                    onClick={() => setTodayKey(`day_${d}`)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      border: '1px solid var(--clinical-blue-border, #bfdbfe)',
+                      background: todayKey === `day_${d}` ? 'var(--clinical-blue, #2563eb)' : '#fff',
+                      color: todayKey === `day_${d}` ? '#fff' : 'var(--clinical-blue, #2563eb)',
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s ease',
+                      boxShadow: todayKey === `day_${d}` ? '0 2px 4px rgba(37,99,235,0.2)' : 'none'
+                    }}
+                  >
+                    Day {d}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Dynamic Content Views */}
         <main className="main-viewport custom-scrollbar">

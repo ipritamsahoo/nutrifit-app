@@ -29,7 +29,7 @@ if not _API_KEY:
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=_API_KEY,
-    timeout=15.0,
+    timeout=30.0, # Increased timeout
     default_headers={
         "HTTP-Referer": "http://localhost:5173",
         "X-Title": "HonFit Plan Generator",
@@ -662,34 +662,33 @@ def _build_doctor_tpl_prompt(
     Ensures AI uses specific details and exercises.
     """
     ex_list = ", ".join(filtered_exercises) if filtered_exercises else "N/A"
-    return f"""User Details:
-Goal: {goal}
-Fitness Level: {level}
-Workout Days: {days}
-Time: {time}
-Target Areas: {muscles}
-Equipment: {equipment}
-Injury: {injury}
-
-Available Exercises:
-{ex_list}
-
-Task:
-1. Create two workout sets (Set A and Set B)
-2. Use only the given exercises
-3. Add sets and reps
-4. Make it suitable for user's level and time
-5. Distribute sets across 7 days alternately
-6. Keep 1 rest day
-
-Important Retrieval Rules:
-- Return ONLY a valid JSON object.
-- NO markdown triple backticks. NO conversational text.
-- JSON Schema: {{"tpl": {{"A": {{"focus": ["string"], "dur": number, "ex": ["Name|SetsxReps|rRestSeconds"]}}, "B": {{"focus": ["string"], "dur": number, "ex": ["Name|SetsxReps|rRestSeconds"]}}}}}}
-- Exactly 4 exercises per set in "ex" array.
-- In "ex", each exercise MUST follow the exact format: "Name|SetsxReps|rRestSeconds" (e.g., "Push Up|3x12|r60"). 
-- Use lowercase 'x' as separator, no spaces inside the triplets.
-"""
+    return "\n".join(
+        [
+            "Return JSON only.",
+            "You are creating two reusable workout templates for the app. Do NOT create a weekly schedule.",
+            f"Goal: {goal}",
+            f"Fitness Level: {level}",
+            f"Workout Days: {days}",
+            f"Session Time: {time}",
+            f"Target Areas: {muscles}",
+            f"Equipment: {equipment}",
+            f"Injury Notes: {injury}",
+            f"Allowed Exercises: {ex_list}",
+            "Schema:",
+            '{"tpl":{"A":{"focus":["upper"],"dur":30,"ex":["Push Up|3x12|r60","Bench Dips|3x10|r45","Dumbbell Curl|3x12|r45","Long Lever Forearm Plank|3x30s|r30"]},"B":{"focus":["legs"],"dur":30,"ex":["Bodyweight Squat|3x12|r60","Dumbbell Forward Lunge|3x10|r60","Glute Bridge|3x15|r45","Dead Bug|3x12|r30"]}}}',
+            "Rules:",
+            "- include exactly one top-level key: tpl",
+            "- inside tpl include only A and B",
+            "- inside each template include only focus, dur, ex",
+            "- focus must be 1-2 short lowercase strings",
+            "- dur must be an integer number of minutes and fit within the requested session time",
+            "- ex must contain exactly 4 items",
+            "- use only the allowed exercises listed above and copy each exercise name exactly",
+            '- every ex item must use the exact format "Name|SetsxReps|rRestSeconds"',
+            "- use lowercase x, numeric reps or seconds like 30s, and numeric rest like r60",
+            "- no schedule, no rest-day plan, no diet, no notes, no markdown, no extra keys",
+        ]
+    )
 
 
 def _build_tpl_prompt(
@@ -943,6 +942,68 @@ def _pick_day_exercises(pool: list[str], day_key: str, avoid_names: set[str] | N
     return selected
 
 
+def _parse_duration_minutes(value: str | int | float | None, default: int = 30) -> int:
+    if isinstance(value, (int, float)) and value > 0:
+        return max(10, min(120, int(value)))
+
+    matches = re.findall(r"\d{1,3}", str(value or ""))
+    if not matches:
+        return default
+
+    return max(10, min(120, int(matches[-1])))
+
+
+def _build_filtered_fallback_tpl(
+    goal: str,
+    medical_conditions: str,
+    filtered_exercises: list[str],
+    session_time: str = "",
+) -> dict[str, dict[str, Any]]:
+    goal_key = _normalize_goal(goal)
+    meta = _GOAL_TEMPLATE_META.get(goal_key, _GOAL_TEMPLATE_META["STAY_FIT"])
+    canonical_pool = _dedupe_strings(
+        [
+            canonical
+            for name in filtered_exercises
+            for canonical in [coerce_valid_exercise_name(name)]
+            if canonical
+        ]
+    )
+
+    if not canonical_pool:
+        return _get_fallback_tpl(goal_key, medical_conditions)
+
+    requested_duration = _parse_duration_minutes(session_time, 30)
+
+    def _build_template(template_key: str, day_index: int, avoid_names: set[str] | None = None) -> dict[str, Any]:
+        meta_block = cast(Dict[str, Any], meta.get(template_key, {}))
+        selected_names = _pick_day_exercises(
+            canonical_pool,
+            f"{goal_key}:{template_key}:{session_time or requested_duration}",
+            avoid_names,
+        )
+        prescribed = [
+            _prescribe_exercise(name, goal_key, medical_conditions, day_index)
+            for name in selected_names
+        ]
+        template_duration = int(cast(Union[int, float, str], meta_block.get("dur", requested_duration)))
+        safe_duration = min(max(10, template_duration), requested_duration)
+        return _build_template_block(
+            cast(List[str], meta_block.get("focus", [])),
+            safe_duration,
+            prescribed,
+        )
+
+    template_a = _build_template("A", 1)
+    used_in_a = set(_extract_template_names(template_a))
+    template_b = _build_template("B", 2, used_in_a)
+
+    return {
+        "A": template_a,
+        "B": template_b,
+    }
+
+
 def _increase_reps_value(value: str, step: int) -> str:
     if step <= 0:
         return value
@@ -1051,6 +1112,107 @@ def _strip_json_wrappers(raw_text: str) -> str:
     return match.group(0) if match else text
 
 
+def _extract_response_text(message: Any) -> str:
+    if isinstance(message, dict):
+        content = message.get("content")
+        reasoning = message.get("reasoning")
+    else:
+        content = getattr(message, "content", None)
+        reasoning = getattr(message, "reasoning", None)
+
+    if isinstance(content, str):
+        return content.strip()
+
+    if isinstance(content, list):
+        parts: list[str] = []
+        for part in content:
+            if isinstance(part, str):
+                if part.strip():
+                    parts.append(part.strip())
+                continue
+
+            if isinstance(part, dict):
+                text_value = part.get("text")
+            else:
+                text_value = getattr(part, "text", None)
+
+            if isinstance(text_value, str):
+                if text_value.strip():
+                    parts.append(text_value.strip())
+                continue
+
+            if isinstance(text_value, dict):
+                nested_value = text_value.get("value")
+            else:
+                nested_value = getattr(text_value, "value", None)
+
+            if isinstance(nested_value, str) and nested_value.strip():
+                parts.append(nested_value.strip())
+
+        return "\n".join(parts).strip()
+
+    if isinstance(reasoning, str):
+        return reasoning.strip()
+
+    return ""
+
+
+def _build_allowed_lookup(values: list[str] | None) -> Set[str]:
+    lookup: Set[str] = set()
+    for value in values or []:
+        canonical = coerce_valid_exercise_name(value)
+        if canonical:
+            lookup.add(canonical)
+        elif value and str(value).strip():
+            lookup.add(str(value).strip())
+    return lookup
+
+
+def _coerce_tpl_payload(payload: Any) -> dict[str, Any] | None:
+    if not isinstance(payload, dict):
+        return None
+
+    raw_tpl = payload.get("tpl", payload)
+    if not isinstance(raw_tpl, dict):
+        return None
+
+    key_map = {
+        "A": "A",
+        "B": "B",
+        "TEMPLATE_A": "A",
+        "TEMPLATE_B": "B",
+        "SET_A": "A",
+        "SET_B": "B",
+        "WORKOUT_A": "A",
+        "WORKOUT_B": "B",
+    }
+    normalized_tpl: dict[str, Any] = {}
+    for key, value in raw_tpl.items():
+        mapped_key = key_map.get(str(key).strip().upper())
+        if mapped_key and mapped_key not in normalized_tpl:
+            normalized_tpl[mapped_key] = value
+
+    return normalized_tpl if set(normalized_tpl.keys()) == {"A", "B"} else None
+
+
+def _coerce_tpl_exercise_item(item: Any) -> str | None:
+    if isinstance(item, str):
+        return item.strip()
+
+    if not isinstance(item, dict):
+        return None
+
+    name = item.get("name") or item.get("exercise")
+    sets = item.get("sets")
+    reps = item.get("reps") or item.get("duration") or item.get("seconds")
+    rest = item.get("rest") or item.get("rest_seconds") or item.get("restSeconds")
+
+    if not name or sets in (None, "") or reps in (None, "") or rest in (None, ""):
+        return None
+
+    return f"{str(name).strip()}|{str(sets).strip()}x{str(reps).strip()}|r{str(rest).strip()}"
+
+
 def _safe_parse_tpl(
     raw_text: str,
     allowed_a: list[str] | None = None,
@@ -1064,30 +1226,35 @@ def _safe_parse_tpl(
         print(f"[Gemini] JSON parse failed: {exc}")
         return None
 
-    if not isinstance(payload, dict) or "tpl" not in payload:
-        print("[Gemini] Validation failed: missing tpl")
-        return None
-
-    tpl = payload.get("tpl")
-    if not isinstance(tpl, dict) or set(tpl.keys()) != {"A", "B"}:
-        print("[Gemini] Validation failed: tpl must contain A and B only")
+    tpl = _coerce_tpl_payload(payload)
+    if not tpl:
+        print("[Gemini] Validation failed: missing or malformed tpl payload")
         return None
 
     allowed_lookup: Dict[str, Set[str]] = {
-        "A": set(allowed_a or []),
-        "B": set(allowed_b or []),
+        "A": _build_allowed_lookup(allowed_a),
+        "B": _build_allowed_lookup(allowed_b),
     }
 
     normalized: dict[str, dict[str, Any]] = {}
     for template_key in ("A", "B"):
         section = tpl.get(template_key)
-        if not isinstance(section, dict) or set(section.keys()) != {"focus", "dur", "ex"}:
+        if not isinstance(section, dict):
             print(f"[Gemini] Validation failed: invalid template block {template_key}")
             return None
 
         focus = section.get("focus")
-        dur = section.get("dur")
-        exercises = section.get("ex")
+        if isinstance(focus, str):
+            focus = [focus]
+
+        dur_raw = section.get("dur")
+        if isinstance(dur_raw, str):
+            dur_match = re.search(r"\d{1,3}", dur_raw)
+            dur = int(dur_match.group(0)) if dur_match else None
+        else:
+            dur = dur_raw
+
+        exercises = section.get("ex", section.get("exercises"))
 
         if not isinstance(focus, list) or not focus or any(not isinstance(item, str) or not item.strip() for item in focus):
             print(f"[Gemini] Validation failed: invalid focus in {template_key}")
@@ -1097,57 +1264,64 @@ def _safe_parse_tpl(
             print(f"[Gemini] Validation failed: invalid dur in {template_key}")
             return None
 
-        if not isinstance(exercises, list) or len(exercises) != 4:
-            print(f"[Gemini] Validation failed: invalid ex count in {template_key}")
+        if not isinstance(exercises, list):
+            print(f"[Gemini] Validation failed: invalid ex payload in {template_key}")
             return None
 
         normalized_exercises: list[str] = []
         for item in exercises:
-            if not isinstance(item, str) or len(item) > 80:
-                print(f"[Gemini] Validation failed: invalid exercise item in {template_key}")
-                return None
+            coerced_item = _coerce_tpl_exercise_item(item)
+            if not isinstance(coerced_item, str) or len(coerced_item) > 80:
+                print(f"[Gemini] Skipping invalid exercise item in {template_key}")
+                continue
 
-            match = _TPL_ITEM_PATTERN.match(item)
+            match = _TPL_ITEM_PATTERN.match(coerced_item)
             if not match:
-                print(f"[Gemini] Validation failed: bad exercise format in {template_key}")
-                return None
+                print(f"[Gemini] Skipping badly formatted exercise item in {template_key}")
+                continue
 
             exercise_name = coerce_valid_exercise_name(match.group(1).strip())
             if not exercise_name:
-                print(f"[Gemini] Validation failed: unknown exercise in {template_key}")
-                return None
+                print(f"[Gemini] Skipping unknown exercise in {template_key}")
+                continue
 
             lookup_set = cast(Set[str], allowed_lookup.get(template_key, set()))
             if lookup_set and exercise_name not in lookup_set:
-                print(f"[Gemini] Validation failed: exercise outside allowed list in {template_key}")
-                return None
+                print(f"[Gemini] Skipping exercise outside allowed list in {template_key}: {exercise_name}")
+                continue
 
             sets = int(match.group(2))
             reps = match.group(3).strip().lower() # Ensure consistency (e.g., 30s)
             rest = int(match.group(4))
             
             if sets < 1 or sets > 6 or rest < 15 or rest > 180:
-                print(f"[Gemini] Validation failed: invalid set/rest values in {template_key}")
-                return None
+                print(f"[Gemini] Skipping invalid set/rest values in {template_key}")
+                continue
 
             if reps.endswith("s"):
                 # Use rstrip to avoid slicing linter bugs
                 duration_value = int(reps.rstrip("s"))
                 if duration_value < 10 or duration_value > 120:
-                    print(f"[Gemini] Validation failed: invalid time value in {template_key}")
-                    return None
+                    print(f"[Gemini] Skipping invalid time value in {template_key}")
+                    continue
             else:
                 try:
                     rep_value = int(reps)
                     if rep_value < 4 or rep_value > 30:
-                        print(f"[Gemini] Validation failed: invalid rep value in {template_key}")
-                        return None
+                        print(f"[Gemini] Skipping invalid rep value in {template_key}")
+                        continue
                 except ValueError:
-                    print(f"[Gemini] Validation failed: non-numeric reps in {template_key}")
-                    return None
+                    print(f"[Gemini] Skipping non-numeric reps in {template_key}")
+                    continue
 
             # NORMALIZATION: Force clean "Name|SetsxReps|rRest" format
             normalized_exercises.append(f"{exercise_name}|{sets}x{reps}|r{rest}")
+            if len(normalized_exercises) == 4:
+                break
+
+        if len(normalized_exercises) != 4:
+            print(f"[Gemini] Validation failed: invalid ex count in {template_key}")
+            return None
 
         normalized[template_key] = {
             "focus": [item.strip() for item in focus],
@@ -1158,17 +1332,23 @@ def _safe_parse_tpl(
     return normalized
 
 
-def _get_v2_filtered_exercises(goal: str, equipment: str, targets: Optional[List[str]], injuries: Optional[List[str]]) -> List[str]:
+def _get_v2_filtered_exercises(goal: str, equipment: str, targets: Optional[List[str]], injuries: Optional[List[str]], fitness_level: str = "beginner") -> List[str]:
     """
     Read JSON objects from the structured exerciseversion2/ folder.
-    Filters by Goal, Equipment, Target Area, and EXCLUDES based on Injury tags.
+    Filters by Goal, Equipment, Target Area, Difficulty, and EXCLUDES based on Injury tags.
     """
     base_dir = os.path.dirname(os.path.abspath(__file__))
     v2_dir = os.path.join(base_dir, "exerciseversion2")
     
-    # Normalize Goal & Equipment to match folder names
+    # Normalize Goal
     goal_norm = (goal or "").strip().upper().replace(" ", "_").replace("-", "_")
-    equip_norm = (equipment or "").strip().upper().replace(" ", "_").replace("-", "_")
+    
+    # Normalize Equipment (Handle Doctor Dashboard inputs)
+    equipment_str = (equipment or "").strip().lower()
+    if "no equip" in equipment_str or not equipment_str:
+        equip_norm = "NO_EQUIPMENT"
+    else:
+        equip_norm = "WITH_EQUIPMENT"
     
     goal_path = os.path.join(v2_dir, goal_norm)
     equip_path = os.path.join(goal_path, equip_norm)
@@ -1178,43 +1358,73 @@ def _get_v2_filtered_exercises(goal: str, equipment: str, targets: Optional[List
         print(f"[AI Service] Warning: Path {equip_path} not found. Fallback to STAY_FIT/NO_EQUIPMENT")
         equip_path = os.path.join(v2_dir, "STAY_FIT", "NO_EQUIPMENT")
     
-    # Prepare injury list for exclusion (lowercase for case-insensitive matching)
     injury_list: List[str] = [i.lower() for i in (injuries or []) if i and i.lower() != 'none']
-    
     all_filtered: List[str] = []
     
-    # Process target areas (they correspond to filenames like "Chest.json")
-    # If no targets provided, or "Full Body", we grab from all files in the equip_dir
+    # Target synonyms to map frontend inputs to filenames
+    SYNONYMS = {
+        "abs": ["abdominals", "lower abdominals", "upper abdominals", "obliques"],
+        "hand": ["forearms", "biceps", "triceps", "wrists"],
+        "hands": ["forearms", "biceps", "triceps", "wrists"],
+        "glutes": ["gluteus maximus", "gluteus medius", "glutes"],
+        "quads": ["quads", "inner quadriceps", "outer quadricep", "rectus femoris"],
+        "back": ["lower back", "lats", "traps", "traps (mid-back)"],
+        "shoulders": ["shoulders", "anterior deltoid", "lateral deltoid", "posterior deltoid", "front shoulders", "rear shoulders"],
+        "shoulder": ["shoulders", "anterior deltoid", "lateral deltoid", "posterior deltoid", "front shoulders", "rear shoulders"],
+        "neck": ["traps", "upper traps"],
+        "legs": ["quads", "hamstrings", "calves", "glutes", "inner thigh"],
+        "leg": ["quads", "hamstrings", "calves", "glutes", "inner thigh"],
+        "core": ["abdominals", "obliques", "lower back", "lower abdominals", "upper abdominals"],
+        "chest": ["chest", "mid and lower chest", "upper chest"],
+        "arms": ["biceps", "triceps", "forearms", "lateral head triceps", "medial head triceps"],
+        "arm": ["biceps", "triceps", "forearms"],
+        "bicep": ["biceps"],
+        "tricep": ["triceps", "lateral head triceps", "medial head triceps"],
+        "calf": ["calves", "gastrocnemius", "tibialis"]
+    }
+    
     target_files: List[str] = []
     if not targets or any("full" in (t or "").lower() for t in targets):
         if os.path.exists(equip_path):
             target_files = [f for f in os.listdir(equip_path) if f.endswith(".json")]
     else:
-        # Map targets to filenames
         if os.path.exists(equip_path):
             all_files_map = {f.lower().replace(".json", ""): f for f in os.listdir(equip_path) if f.endswith(".json")}
             for t in targets:
                 if not t: continue
-                t_key = t.strip().lower()
-                if t_key in all_files_map:
-                    target_files.append(all_files_map[t_key])
+                t_lower = t.strip().lower()
+                search_terms = set([t_lower])
+                if t_lower in SYNONYMS:
+                    search_terms.update(SYNONYMS[t_lower])
                     
-    # Actually read the files and filter
+                for search_term in search_terms:
+                    if search_term in all_files_map:
+                        target_files.append(all_files_map[search_term])
+                        
+    # Duplicate prevention for target_files
+    target_files = list(set(target_files))
+                    
+    # Read files and filter safely
     for filename in target_files:
         filepath = os.path.join(equip_path, filename)
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 exercises_data = json.load(f)
-                # Filter each exercise object
                 for ex in exercises_data:
-                    # Check injuries
+                    # Check Level/Difficulty
+                    difficulty = str(ex.get("difficulty", "beginner")).lower()
+                    if fitness_level == "beginner" and difficulty != "beginner":
+                        continue
+                    elif fitness_level == "intermediate" and difficulty == "advanced":
+                        continue
+                    # advanced -> all allowed
+
                     avoid_tags: List[str] = [str(tag).lower() for tag in ex.get("injury_avoid", [])]
                     is_safe = True
                     for injury in injury_list:
                         if any(tag in injury for tag in avoid_tags):
                             is_safe = False
                             break
-                    
                     if is_safe:
                         name = ex.get("name")
                         if name:
@@ -1222,10 +1432,41 @@ def _get_v2_filtered_exercises(goal: str, equipment: str, targets: Optional[List
         except Exception as e:
             print(f"[AI Service] Failed to read {filepath}: {e}")
 
+    # GUARANTEED FALLBACK: If nothing was found, grab random safe exercises from the whole folder
+    if not all_filtered and os.path.exists(equip_path):
+        print(f"[AI Service] Warning: No exercises matched {targets}. Reverting to Full Body safe exercises.")
+        for filename in os.listdir(equip_path):
+            if filename.endswith(".json"):
+                filepath = os.path.join(equip_path, filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        exercises_data = json.load(f)
+                        for ex in exercises_data:
+                            # Check Level/Difficulty
+                            difficulty = str(ex.get("difficulty", "beginner")).lower()
+                            if fitness_level == "beginner" and difficulty != "beginner":
+                                continue
+                            elif fitness_level == "intermediate" and difficulty == "advanced":
+                                continue
+                            
+                            avoid_tags: List[str] = [str(tag).lower() for tag in ex.get("injury_avoid", [])]
+                            is_safe = True
+                            for injury in injury_list:
+                                if any(tag in injury for tag in avoid_tags):
+                                    is_safe = False
+                                    break
+                            if is_safe:
+                                name = ex.get("name")
+                                if name:
+                                    all_filtered.append(str(name))
+                except Exception:
+                    pass
+
     unique_names: List[str] = list(set(all_filtered))
-    # Return at most 25 for the prompt to keep it concise
-    if len(unique_names) > 25:
-        return random.sample(unique_names, 25)
+    random.shuffle(unique_names)
+    unique_names = unique_names[:30]
+    
+    print(f"[AI Service] Successfully filtered {len(unique_names)} exercises from folders.")
     return unique_names
 
 def generate_plan(
@@ -1256,14 +1497,14 @@ def generate_plan(
     if workout_goal and equipment:
         print(f"[AI Service] Using Smart V2 Filter Route for Doctor Dashboard...")
         
-        # 1. Smart Filter from V2 Data with Injury Exclusion
-        v2_filtered = _get_v2_filtered_exercises(workout_goal, equipment, target_areas, injuries)
+        # 1. Smart Filter from V2 Data with Injury Exclusion & Difficulty
+        fitness_level_str = (fitness_level or "beginner").strip().lower()
+        v2_filtered = _get_v2_filtered_exercises(workout_goal, equipment, target_areas, injuries, fitness_level_str)
         
-        # 2. Build AI Prompt for Gemini/Gemma
-        # We'll use the A/B templates as they are more consistent for medical use
-        mid = len(v2_filtered) // 2
-        a_candidates = v2_filtered[0:mid] if v2_filtered else []
-        b_candidates = v2_filtered[mid:] if v2_filtered else []
+        # 2. Build AI Prompt for LLM
+        # We allow the AI to use any of the up to 30 returned exercises for both A and B
+        a_candidates = v2_filtered
+        b_candidates = v2_filtered
         
         if not v2_filtered:
             # Emergency fallback if filtering yielded nothing
@@ -1284,34 +1525,79 @@ def generate_plan(
             filtered_exercises=v2_filtered
         )
         
-        try:
-            # Call NVIDIA model (or your preferred LLM)
-            response = client.chat.completions.create(
-                model=_MODEL_NAME,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=600,
-            )
-            raw_ai = response.choices[0].message.content or ""
-            tpl_data = _safe_parse_tpl(raw_ai, a_candidates, b_candidates)
-            
-            if tpl_data:
-                # Successfully generated AI templates. Now build the full 7-day schedule.
-                weekly_plan = _build_weekly_templates(workout_goal, medical_conditions, tpl_data, {}, workout_days or "")
-                return {
-                    "profile_hash": profile_hash,
-                    "plan": {
-                        "schema_version": 2,
-                        "goal": _normalize_goal(workout_goal),
-                        "sched": weekly_plan["sched"],
-                        "tpl": weekly_plan["tpl"],
-                        "diet": _build_demo_diet(age, weight, height, goal, medical_conditions, diet_preference),
-                        "allowed_exercises": v2_filtered,
-                        "notes": f"Personalized plan for {fitness_level} level. Frequency: {workout_days}. Session: {session_time}."
+        last_error = None
+        DOCTOR_MODEL = _MODEL_NAME
+        
+        for attempt in range(3):
+            try:
+                print(f"[AI Service] Calling Doctor AI ({DOCTOR_MODEL}) (Attempt {attempt + 1}/3)...")
+                response = client.chat.completions.create(
+                    model=DOCTOR_MODEL,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.1,
+                    max_tokens=800,
+                )
+                
+                if not response.choices:
+                    last_error = "Empty choices in provider response"
+                    print(f"[AI Service] Attempt {attempt+1} FAILED: Empty choices in response.")
+                    continue
+                    
+                raw_ai = _extract_response_text(response.choices[0].message)
+                print(f"[AI Service] Raw Output (Attempt {attempt + 1}): {raw_ai[:300]}...")
+                
+                if not raw_ai.strip():
+                    last_error = "Provider returned empty message content"
+                    print(f"[AI Service] Attempt {attempt+1} FAILED: AI returned an empty string.")
+                    continue
+                
+                tpl_data = _safe_parse_tpl(raw_ai, a_candidates, b_candidates)
+                
+                if tpl_data:
+                    # Successfully generated AI templates. Now build the full 7-day schedule.
+                    weekly_plan = _build_weekly_templates(workout_goal, medical_conditions, tpl_data, {}, workout_days or "")
+                    return {
+                        "profile_hash": profile_hash,
+                        "plan": {
+                            "schema_version": 2,
+                            "goal": _normalize_goal(workout_goal),
+                            "sched": weekly_plan["sched"],
+                            "tpl": weekly_plan["tpl"],
+                            "diet": _build_demo_diet(age, weight, height, goal, medical_conditions, diet_preference),
+                            "allowed_exercises": v2_filtered,
+                            "notes": f"Personalized plan for {fitness_level} level. Frequency: {workout_days}. Session: {session_time}."
+                        }
                     }
-                }
-        except Exception as e:
-            print(f"[AI Service] AI generation failed, using fallback: {e}")
+                else:
+                    last_error = "AI returned invalid JSON format (failed validation)"
+                    print(f"[AI Service] Parse failed on attempt {attempt + 1}: {last_error}")
+            except Exception as e:
+                last_error = str(e)
+                print(f"[AI Service] LLM call CRASHED on attempt {attempt + 1}: {e}")
+                
+        print(f"[AI Service] AI generation exhausted after 3 tries. Using filtered fallback templates. Last error: {last_error}")
+        fallback_tpl = _build_filtered_fallback_tpl(
+            workout_goal,
+            medical_conditions,
+            v2_filtered,
+            session_time or "",
+        )
+        weekly_plan = _build_weekly_templates(workout_goal, medical_conditions, fallback_tpl, {}, workout_days or "")
+        return {
+            "profile_hash": profile_hash,
+            "plan": {
+                "schema_version": 2,
+                "goal": _normalize_goal(workout_goal),
+                "sched": weekly_plan["sched"],
+                "tpl": weekly_plan["tpl"],
+                "diet": _build_demo_diet(age, weight, height, goal, medical_conditions, diet_preference),
+                "allowed_exercises": v2_filtered,
+                "notes": (
+                    f"Personalized plan for {fitness_level} level. Frequency: {workout_days}. "
+                    f"Session: {session_time}. AI fallback used after empty or invalid provider output."
+                ),
+            }
+        }
             
     # FALLBACK / OUTSIDER PATH: Default to deterministic logic to avoid breaking legacy chatbot
     print(f"[AI Service] Using Fallback / Deterministic Route...")

@@ -1378,24 +1378,69 @@
   transform: scale(0.98);
 }
 
-/* Live / Tracker */
-.live-tracker-section {
+/* Live / Tracker Layout */
+.workout-live-layout {
+  display: flex;
+  gap: 24px;
+  height: calc(100vh - 56px);
   width: 100%;
-  height: clamp(350px, 55vh, 600px);
-  flex-shrink: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .workout-live-layout {
+    flex-direction: column;
+    height: auto;
+  }
+}
+
+.live-tracker-column {
+  height: 100%;
+  flex: 1; /* Match info column */
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .live-tracker-column {
+    width: 100%;
+    flex: none;
+    aspect-ratio: unset;
+    height: clamp(400px, 70vh, 800px);
+  }
+}
+
+.live-info-column {
+  flex: 1.2; /* Make info column wider */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.live-info-column::-webkit-scrollbar {
+  width: 6px;
+}
+.live-info-column::-webkit-scrollbar-track {
+  background: transparent;
+}
+.live-info-column::-webkit-scrollbar-thumb {
+  background: var(--clinical-slate-200);
+  border-radius: 10px;
 }
 
 .tracker-stage {
   width: 100%;
   height: 100%;
   background: #000000;
-  border-radius: 16px;
+  border-radius: 20px;
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   border: 1px solid var(--clinical-slate-200);
 }
 
@@ -1453,45 +1498,23 @@
   transform: scale(1.05);
 }
 
-/* Info Row Below Tracker */
-.live-info-row {
-  display: flex;
-  gap: 16px;
+/* Info Column Beside Tracker */
+.live-info-column .rep-counter-card,
+.live-info-column .live-exercise-info-card,
+.live-info-column .ref-card {
   width: 100%;
-  padding-top: 16px;
-  flex-wrap: wrap;
-}
-
-.live-info-row .rep-counter-card {
-  flex: 1;
-  min-width: 180px;
-}
-
-.live-info-row .live-exercise-info-card {
-  flex: 1;
-  min-width: 180px;
-}
-
-.live-info-row .ref-card {
-  flex: 2;
-  min-width: 300px;
-}
-
-.ref-videos-row {
-  display: flex;
-  gap: 12px;
-}
-
-.ref-videos-row .mini-video {
-  flex: 1;
+  flex: none;
 }
 
 .ref-card {
   background: white;
-  padding: 16px;
+  padding: 20px;
   border-radius: 16px;
   border: 1px solid var(--clinical-slate-200);
   box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* allow card to expand to fill remaining vertical space */
 }
 
 .ref-label {
@@ -1499,28 +1522,49 @@
   font-weight: 700;
   text-transform: uppercase;
   color: var(--clinical-slate-500);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+.ref-videos-row {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  align-items: center; /* keep videos centered vertically within their larger flex space */
 }
 
 .mini-video {
+  flex: 1;
   aspect-ratio: 16/9;
   background: var(--clinical-slate-900);
-  border-radius: 8px;
+  border-radius: 12px;
   position: relative;
-  border: 1px solid var(--clinical-slate-200);
+  border: 2px solid var(--clinical-slate-200);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.mini-video video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .video-tag {
   position: absolute;
-  bottom: 4px;
-  right: 4px;
-  font-size: 8px;
+  bottom: 8px;
+  right: 8px;
+  font-size: 9px;
+  font-weight: 700;
   color: white;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 2px 4px;
-  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 4px 10px;
+  border-radius: 6px;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .rep-counter-card {
