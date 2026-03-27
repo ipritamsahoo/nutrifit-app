@@ -17,15 +17,14 @@ from typing import List, Optional, Any, Dict
 from openai import OpenAI
 from dotenv import load_dotenv
 from exercise_utils import sanitize_plan_workouts  # type: ignore
-from ai_service import _build_fallback_plan, generate_compact_plan
-from diet_engine import build_7_day_diet         # type: ignore
+from ai_service import _build_fallback_plan, generate_compact_plan, _build_demo_diet
 from plan_assembler import expand_workout_plan     # type: ignore
 
 load_dotenv()
 
 # Split models: Use stepfun for chat, but a blazing fast model for heavy JSON plan gen
 _CHAT_MODEL = "stepfun/step-3.5-flash:free"
-_PLAN_MODEL = "google/gemini-2.0-flash-lite-preview-02-05:free"
+_PLAN_MODEL = "stepfun/step-3.5-flash:free"
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 _EXERCISES_DIR = os.path.join(_BASE_DIR, "exercises")
@@ -131,7 +130,8 @@ def _finalize_plan_for_chat(session_id: str, profile: dict) -> str:
         _start_plan_generation_background(session_id, profile)
 
     print(f"[Chat] Finalizing plan for {session_id}...")
-    for _ in range(12):
+    # INCREASED WAIT: 80 loops * 0.5s = 40 seconds max wait for AI plan
+    for _ in range(80):
         time.sleep(0.5)
         cached_plan = session.get("plan_json")
         if session.get("plan_done") and _looks_like_json_object(cached_plan):
@@ -252,25 +252,39 @@ def _start_plan_generation_background(session_id: str, profile: dict) -> None:
     session["plan_started"] = True
 
     def generate_task():
-        print(f"[Generator] Compact plan task started for {session_id}...")
+        print(f"[Generator] AI plan task started for {session_id} using Key 2...")
         try:
-            result = generate_compact_plan(
-                age=profile["age"],
-                weight=profile["weight"],
-                height=profile["height"],
-                goal=profile["goal"],
-                medical_conditions=profile["medical_conditions"],
-                diet_preference=profile.get("diet_preference", ""),
+            # Wait for filtering to complete (max 8 seconds)
+            for _ in range(16):
+                if session.get("filtering_done"):
+                    break
+                time.sleep(0.5)
+
+            valid_exercises = session.get("filtered_exercises", "Push Up, Bodyweight Squat, Glute Bridge, Dead Bug")
+            user_summary = (
+                f"Age: {profile['age']}, Weight: {profile['weight']}kg, "
+                f"Height: {profile['height']}cm, Goal: {profile['goal']}, "
+                f"Medical: {profile.get('medical_conditions', 'None')}, "
+                f"Diet: {profile.get('diet_preference', 'Any')}"
             )
-            session["plan_json"] = json.dumps(result["plan"], ensure_ascii=False)
+
+            # Use _generate_plan which calls client_plan (Key 2) for AI generation
+            plan_json_str = _generate_plan(user_summary, valid_exercises, profile)
+
+            if plan_json_str and plan_json_str.strip():
+                session["plan_json"] = plan_json_str
+                print(f"[Generator] AI plan generated successfully for {session_id} via Key 2.")
+            else:
+                raise ValueError("AI returned empty plan, falling back to deterministic.")
+
         except Exception as exc:
-            print(f"[Generator] Compact plan task failed for {session_id}: {exc}")
+            print(f"[Generator] AI plan failed for {session_id}: {exc}. Using deterministic fallback.")
             result = generate_compact_plan(
-                age=25,
-                weight=70,
-                height=170,
-                goal="STAY_FIT",
-                medical_conditions="",
+                age=profile.get("age", 25),
+                weight=profile.get("weight", 70),
+                height=profile.get("height", 170),
+                goal=profile.get("goal", "STAY_FIT"),
+                medical_conditions=profile.get("medical_conditions", ""),
                 diet_preference=profile.get("diet_preference", ""),
             )
             session["plan_json"] = json.dumps(result["plan"], ensure_ascii=False)
@@ -306,10 +320,10 @@ Wait for the user to answer the current question before asking the next. Do not 
 ## PHASE 2: SECRET TRIGGERS & FILLER QUESTIONS (BUYING TIME)
 - When the user successfully answers #7 (Focus Areas), your next reply MUST start with:
 [START_FILTERING] Goal: <goal>, Equipment: <equipment>, Targets: Target1, Target2, Target3
-(ALWAYS use commas between targets. Smoothly ask question #8 Food preference after.)
+(ALWAYS use commas between targets. Then you MUST smoothly ask question #8 Food preference. Do NOT skip #8!)
 
 - When the user answers #8 (Food preference), your next reply MUST start with:
-[START_PLAN_GEN] Summary: <summarize the user's profile>
+[START_PLAN_GEN]
 (Then seamlessly transition into asking the first Filler Question below)
 
 Now ask these 4 lifestyle questions STRICTLY ONE AT A TIME:
@@ -335,44 +349,36 @@ CRITICAL RULES:
 - After the user answers Filler 4, DO NOT ask anything else. Output ONLY [PLAN_READY].
 """
 
-def get_generation_system_prompt(valid_exercises: str) -> str:
-    """Ultra-restricted prompt for Stage 2 plan generation."""
-    return f"""### ROLE: EXPERT FITNESS JSON GENERATOR
-### CORE DIRECTIVE: Output ONLY a valid 7-day JSON object. EXACTLY as specified.
-### ABSOLUTE CONSTRAINTS (STRICT OBEDIENCE REQUIRED):
-1. **EXERCISES**: 
-   - USE ONLY NAMES FROM THIS LIST: {valid_exercises}
-   - DO NOT hallucinate, invent, or suggest ANY exercise not on the list.
-   - EXACTLY 4 exercises per workout day.
-2. **FORMAT**: 
-   - OUTPUT 100% VALID JSON ONLY. No markdown triple backticks. No conversational text. No intro/outro.
-3. **CONTENT**: 
-   - STRICT MINIMALISM: Keep all text extremely short to save tokens and speed up generation.
-   - Meal names MUST be 2-3 words max (e.g., "Oatmeal", "Chicken Rice").
-   - NO notes, NO descriptions. Keep it incredibly brief and fast.
+def get_unified_generation_prompt(valid_exercises: str, user_summary: str) -> str:
+    """Unified single prompt for Stage 2 plan generation."""
+    return f"""Return ONLY valid JSON. No text.
 
-### JSON STRUCTURE TEMPLATE:
+Rules:
+- Use ONLY these exercises: {valid_exercises}
+- Exactly 4 exercises per template
+- Keep text minimal
+- No extra fields, no explanation
+
+Format:
 {{
-  "diet_plan": {{ 
-    "day_1": {{ 
-      "breakfast": {{"meal": "...", "calories": 0}}, 
-      "lunch": {{"meal": "...", "calories": 0}}, 
-      "dinner": {{"meal": "...", "calories": 0}}, 
-      "snacks": {{"meal": "...", "calories": 0}} 
-    }}, ... 
-  }},
-  "workout_plan": {{ 
-    "day_1": {{ 
-      "exercises": [
-        {{"name": "...", "sets": 3, "reps": 12, "target_muscle": "..."}}, ...
-      ], 
-      "duration_minutes": 45 
-    }}, ... 
-  }},
-  "daily_calories_target": 2000, 
-  "daily_water_liters": 2.5, 
-  "notes": "..."
-}}"""
+  "template_a":[
+    {{"name":"","sets":3,"reps":12,"target_muscle":""}},
+    {{"name":"","sets":3,"reps":10,"target_muscle":""}},
+    {{"name":"","sets":3,"reps":12,"target_muscle":""}},
+    {{"name":"","sets":3,"reps":10,"target_muscle":""}}
+  ],
+  "template_b":[
+    {{"name":"","sets":3,"reps":15,"target_muscle":""}},
+    {{"name":"","sets":3,"reps":12,"target_muscle":""}},
+    {{"name":"","sets":3,"reps":15,"target_muscle":""}},
+    {{"name":"","sets":3,"reps":12,"target_muscle":""}}
+  ],
+  "daily_calories_target":2000,
+  "daily_water_liters":2.5
+}}
+
+User:
+{user_summary}"""
 
 def _get_filtered_exercises(goal: str, equipment: str, targets: list[str]) -> str:
     """Read JSON files from the structured folders and return a combined list of names."""
@@ -483,15 +489,15 @@ def _get_filtered_exercises(goal: str, equipment: str, targets: list[str]) -> st
         print(f"[Filter] WARNING: Result is EMPTY for targets {processed_targets}")
     return res
 
-def _generate_plan(user_summary: str, valid_exercises: str) -> str:
+def _generate_plan(user_summary: str, valid_exercises: str, profile: Optional[dict] = None) -> str:
     """Stage 2 API call: Fetches A/B templates and assembles full programmatic plan."""
     print(f"[Chat] Stage 2: Generating A/B templates with {len(valid_exercises.split(','))} exercises...")
     try:
+        prompt_text = get_unified_generation_prompt(valid_exercises, user_summary)
         response = client_plan.chat.completions.create(
             model=_PLAN_MODEL,
             messages=[
-                {"role": "system", "content": get_generation_system_prompt(valid_exercises)},
-                {"role": "user", "content": f"User Profile: {user_summary}"}
+                {"role": "user", "content": prompt_text}
             ],
             temperature=0.1 # Lower temp makes it generate faster and stick strictly to JSON format
         )
@@ -519,22 +525,38 @@ def _generate_plan(user_summary: str, valid_exercises: str) -> str:
             cals = 2000
             
         water = ai_data.get("daily_water_liters", 2.5)
-        notes = ai_data.get("notes", "Stay hydrated and be consistent!")
-        
-        # Determine veg heuristically from user_summary
-        is_veg = "non-veg" not in user_summary.lower() and "non veg" not in user_summary.lower()
-        print(f"[Chat] V2 Assembler: is_veg={is_veg}, cals={cals}")
         
         # V2 Deterministic Engine Calls
-        diet = build_7_day_diet(is_veg, cals)
+        profile_data = profile or {}
+        diet = _build_demo_diet(
+            age=profile_data.get("age", 25),
+            weight=profile_data.get("weight", 70),
+            height=profile_data.get("height", 170),
+            goal=profile_data.get("goal", "STAY_FIT"),
+            medical_conditions=profile_data.get("medical_conditions", ""),
+            diet_preference=profile_data.get("diet_preference", "")
+        )
         workout = expand_workout_plan(template_a, template_b)
         
+        # Convert V1 Expanded Workout into V2 Sched/Tpl format
+        sched = ["A1", "B1", "R", "A2", "B2", "A3", "R"]
+        tpl = {
+            "A1": {"focus": ["Primary"], "dur": 45, "ex": workout.get("day_1", {}).get("exercises", [])},
+            "B1": {"focus": ["Secondary"], "dur": 45, "ex": workout.get("day_2", {}).get("exercises", [])},
+            "A2": {"focus": ["Primary"], "dur": 45, "ex": workout.get("day_4", {}).get("exercises", [])},
+            "B2": {"focus": ["Secondary"], "dur": 45, "ex": workout.get("day_5", {}).get("exercises", [])},
+            "A3": {"focus": ["Primary"], "dur": 55, "ex": workout.get("day_6", {}).get("exercises", [])},
+            "R": {"focus": ["Recovery"], "dur": 0, "ex": []}
+        }
+        
+        # Assemble V2 Schema Final Plan
         final_plan = {
-            "diet_plan": diet,
-            "workout_plan": workout,
-            "daily_calories_target": cals,
-            "daily_water_liters": water,
-            "notes": notes
+            "schema_version": 2,
+            "goal": profile_data.get("goal", "STAY_FIT"),
+            "sched": sched,
+            "tpl": tpl,
+            "diet": diet,
+            "notes": ""
         }
         
         return json.dumps(final_plan, indent=2)

@@ -8,8 +8,9 @@
 
 /* ── Status colors for skeleton (KinesteX Neon Style) ───────────── */
 const STATUS_COLORS = {
-  idle:        '#39FF14',   // Neon Green (Matches the image)
-  inProgress:  '#FFD700',   // Vivid Gold/Yellow – Rep in progress
+  uncalibrated: '#FF3333',  // Neon Red for out-of-bounds/calibration
+  idle:        '#39FF14',   // Neon Green
+  inProgress:  '#FFD700',   // Vivid Gold/Yellow 
   success:     '#39FF14',   // Neon Green + heavier glow for success
 };
 
@@ -67,6 +68,9 @@ export function clearCanvas(ctx, width, height) {
 function drawBone(ctx, p1, p2, w1, w2, width, height, themeColor, isGlow) {
   if (p1.visibility < MIN_VISIBILITY || p2.visibility < MIN_VISIBILITY) return;
 
+  // Scale factor to keep proportions consistent regardless of video feed size
+  const scale = Math.max(width, height) / 800; // Baseline 800px
+
   const x1 = p1.x * width;
   const y1 = p1.y * height;
   const x2 = p2.x * width;
@@ -76,7 +80,7 @@ function drawBone(ctx, p1, p2, w1, w2, width, height, themeColor, isGlow) {
   const dy = y2 - y1;
   const len = Math.sqrt(dx * dx + dy * dy);
   
-  const GAP = 15; // Gap between keypoint center and bone end
+  const GAP = 15 * scale; // Responsive gap between keypoint center and bone end
   if (len <= GAP * 2) return; // Bone too short to draw realistically
 
   // Normalized direction vector
@@ -90,8 +94,8 @@ function drawBone(ctx, p1, p2, w1, w2, width, height, themeColor, isGlow) {
   const endY = y2 - uy * GAP;
 
   const boneLen = len - 2 * GAP;
-  let R = w1; // Radius of start cap
-  let r = w2; // Radius of end cap
+  let R = w1 * scale; // Radius of start cap
+  let r = w2 * scale; // Radius of end cap
 
   // Safety net to prevent Math.asin NaN if R - r > boneLen
   if (Math.abs(R - r) >= boneLen) {
@@ -117,11 +121,11 @@ function drawBone(ctx, p1, p2, w1, w2, width, height, themeColor, isGlow) {
 
   // Thin, crisp border
   ctx.strokeStyle = themeColor;
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 2 * scale; // Responsive line width
 
   if (isGlow) {
     ctx.shadowColor = themeColor;
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 12 * scale; // Responsive glow
   } else {
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
@@ -130,7 +134,7 @@ function drawBone(ctx, p1, p2, w1, w2, width, height, themeColor, isGlow) {
   const alphaOpacity = Math.max(0.4, Math.min(p1.visibility, p2.visibility));
   ctx.globalAlpha = alphaOpacity;
   
-  // Stroke ONLY
+  // Stroke ONLY to make them hollow and sleek
   ctx.stroke();
 }
 
@@ -159,6 +163,7 @@ export function drawConnections(ctx, landmarks, width, height, status = 'idle') 
  */
 export function drawKeypoints(ctx, landmarks, width, height, status = 'idle') {
   const themeColor = STATUS_COLORS[status] || STATUS_COLORS.idle;
+  const scale = Math.max(width, height) / 800; // Baseline 800px
 
   ctx.fillStyle = themeColor;
 
@@ -169,17 +174,17 @@ export function drawKeypoints(ctx, landmarks, width, height, status = 'idle') {
     const x = lm.x * width;
     const y = lm.y * height;
 
-    // Small precise circles
-    let radius = 6; 
+    // Small precise circles scaled responsively
+    let radius = 5 * scale; 
     if ([29, 30, 31, 32, 17, 18, 19, 20, 21, 22].includes(index)) {
-      radius = 4; // hands/feet smaller
+      radius = 3 * scale; // hands/feet smaller
     }
 
     ctx.globalAlpha = Math.max(0.6, lm.visibility);
 
     if (status === 'success') {
       ctx.shadowColor = themeColor;
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = 10 * scale; // Glow scaled
     } else {
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;

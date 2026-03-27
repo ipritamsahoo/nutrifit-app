@@ -121,3 +121,32 @@ export function checkGenericRep(angle, currentState, config) {
 
   return { newState, repCompleted, feedback, progress, isCorrect };
 }
+
+/**
+ * Validates if the user's full body is visible within the 5% margins of the frame,
+ * ensuring they fit securely inside a body outline.
+ */
+export function isUserFullyVisible(landmarks) {
+  if (!landmarks || landmarks.length === 0) return false;
+
+  // Required joints: Nose(0), Shoulders(11,12), Hips(23,24), Ankles(27,28)
+  const required = [0, 11, 12, 23, 24, 27, 28];
+  
+  for (let idx of required) {
+    const lm = landmarks[idx];
+    if (!lm || lm.visibility < 0.6) return false;
+    
+    // Bounds check with 5% margin to prevent limbs from getting cut off
+    if (lm.x < 0.05 || lm.x > 0.95 || lm.y < 0.05 || lm.y > 0.95) return false;
+  }
+
+  // Vertical height threshold check (Nose to Ankles)
+  const headY = landmarks[0].y;
+  const anklesY = (landmarks[27].y + landmarks[28].y) / 2;
+  const height = anklesY - headY;
+  
+  // Must occupy between 45% and 90% of screen height to fit the outline
+  if (height < 0.45 || height > 0.90) return false;
+
+  return true;
+}
