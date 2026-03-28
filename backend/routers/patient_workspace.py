@@ -65,6 +65,7 @@ async def create_plan(req: PlanRequest):
         raise HTTPException(status_code=500, detail=f"Failed to save health profile: {e}")
 
     # Phase 2: Generate plan
+    import asyncio
     try:
         if req.plan_mode == "deterministic_diet":
             # Use local deterministic logic
@@ -81,25 +82,51 @@ async def create_plan(req: PlanRequest):
                 "meals": req.meals_per_day
             })
         else:
-            # Generate plan via local AI service abstraction
-            plan = ai_service.generate_plan(
-                age=req.age,
-                weight=req.weight,
-                height=req.height,
-                goal=req.goal,
-                medical_conditions=req.medical_conditions,
-                diet_preference=req.food_preference,
-                # New Workout Specifics
-                workout_goal=req.workout_goal,
-                equipment=req.equipment,
-                target_areas=req.target_areas,
-                fitness_level=req.fitness_level,
-                workout_days=req.workout_days,
-                session_time=req.session_time,
-                injuries=req.injuries,
-                intensity=req.intensity
-            )
+            # Generate plan via local AI service abstraction with 30s timeout
+            try:
+                # We use wait_for to ensure the doctor doesn't wait forever
+                plan = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        ai_service.generate_plan,
+                        age=req.age,
+                        weight=req.weight,
+                        height=req.height,
+                        goal=req.goal,
+                        medical_conditions=req.medical_conditions,
+                        diet_preference=req.food_preference,
+                        workout_goal=req.workout_goal,
+                        equipment=req.equipment,
+                        target_areas=req.target_areas,
+                        fitness_level=req.fitness_level,
+                        workout_days=req.workout_days,
+                        session_time=req.session_time,
+                        injuries=req.injuries,
+                        intensity=req.intensity
+                    ),
+                    timeout=30.0
+                )
+            except asyncio.TimeoutError:
+                print(f"[Patient Workspace] AI generation timed out after 30s for {req.uid}. Using High Quality Fallback.")
+                # Trigger a high-quality deterministic fallback
+                plan = ai_service.generate_plan(
+                    age=req.age,
+                    weight=req.weight,
+                    height=req.height,
+                    goal=req.goal,
+                    medical_conditions=req.medical_conditions,
+                    diet_preference=req.food_preference,
+                    workout_goal=req.workout_goal,
+                    equipment=req.equipment,
+                    target_areas=req.target_areas,
+                    fitness_level=req.fitness_level,
+                    workout_days=req.workout_days,
+                    session_time=req.session_time,
+                    injuries=req.injuries,
+                    intensity=req.intensity,
+                    force_deterministic_fallback=True # New flag to bypass AI
+                )
     except Exception as e:
+        print(f"[Patient Workspace] Plan generation CRITICAL FAILURE: {e}")
         raise HTTPException(status_code=500, detail=f"Plan generation failed: {e}")
 
     # Phase 3: Normalize and save the plan to Firestore

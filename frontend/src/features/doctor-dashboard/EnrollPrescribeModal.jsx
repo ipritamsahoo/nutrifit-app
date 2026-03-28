@@ -353,9 +353,16 @@ const CollapsibleSection = ({ title, defaultOpen = true, children, important = f
 
 export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) {
 
-  /* ── Account fields (from AddPatientModal) ──────────── */
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
+  const [emailExists, setEmailExists] = useState(false);
+  const [emailChecking, setEmailChecking] = useState(false);
+
+  // Focus Refs
+  const nameRef = useRef(null);
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+  const ageRef = useRef(null);
 
   /* ── Patient demographics ──────────────────────────── */
   const [patientName, setPatientName] = useState('');
@@ -457,12 +464,36 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
     }
   };
 
-  /* ── Close on ESC ──────────────────────────────────── */
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  /* ── Real-time Email Existence Check ───────────────── */
+  useEffect(() => {
+    if (!email || !email.includes('@')) {
+      setEmailExists(false);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      setEmailChecking(true);
+      try {
+        const res = await fetch(`${API_URL}/check-email?email=${encodeURIComponent(email)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setEmailExists(data.exists);
+        }
+      } catch (err) {
+        console.error("Email check failed", err);
+      } finally {
+        setEmailChecking(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [email]);
 
   /* ── Exercise CRUD ─────────────────────────────────── */
   function addExercise() {
@@ -758,7 +789,8 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
   
       if (fullGeneratedPlan) {
         if (fullGeneratedPlan.schema_version === 2) {
-          finalDietJson = { ...fullGeneratedPlan.diet };
+          // AI V2 uses .diet (with .days), Deterministic V1+ uses .diet_plan (top-level days)
+          finalDietJson = fullGeneratedPlan.diet || fullGeneratedPlan.diet_plan || {};
           
           finalWorkoutJson = { 
             sched: fullGeneratedPlan.sched, 
@@ -768,7 +800,12 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
           // V1 Legacy Support
           if (fullGeneratedPlan.diet_plan) {
             finalDietJson = { ...fullGeneratedPlan.diet_plan };
-            finalDietJson.day_1 = { breakfast, lunch, dinner };
+            // Ensure edits from the manual textareas are merged
+            finalDietJson.day_1 = [
+              { meal_type: 'breakfast', name: breakfast, cal: 0 },
+              { meal_type: 'lunch', name: lunch, cal: 0 },
+              { meal_type: 'dinner', name: dinner, cal: 0 }
+            ];
           }
           if (fullGeneratedPlan.workout_plan) {
             finalWorkoutJson = { ...fullGeneratedPlan.workout_plan };
@@ -850,6 +887,7 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
   const isBasicInfoValid = 
     patientName.trim() !== '' && 
     email.includes('@') && 
+    !emailExists && 
     password.length >= 6 &&
     age.trim() !== '' &&
     gender !== '' &&
@@ -981,15 +1019,45 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
 
                 <div className="rx-field-group">
                   <label className="rx-label">Full Name <span style={{ color: '#f43f5e' }}>*</span></label>
-                  <input className="rx-input" type="text" placeholder="e.g. Sam Das"
-                    value={patientName} onChange={e => setPatientName(e.target.value)} />
+                  <input 
+                    ref={nameRef}
+                    autoFocus
+                    className="rx-input" 
+                    type="text" 
+                    placeholder="e.g. Sam Das"
+                    value={patientName} 
+                    onChange={e => setPatientName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') emailRef.current?.focus(); }}
+                  />
                 </div>
 
-                {/* Account fields from AddPatientModal */}
                 <div className="rx-field-group">
-                  <label className="rx-label">Email (Gmail) <span style={{ color: '#f43f5e' }}>*</span></label>
-                  <input className="rx-input" type="email" placeholder="patient@gmail.com"
-                    value={email} onChange={e => setEmail(e.target.value)} />
+                  <label className="rx-label" style={{ color: emailExists ? '#f43f5e' : 'inherit' }}>
+                    Email (Gmail) <span style={{ color: '#f43f5e' }}>*</span>
+                  </label>
+                  <input 
+                    ref={emailRef}
+                    className="rx-input" 
+                    type="email" 
+                    placeholder="patient@gmail.com"
+                    style={{ 
+                      borderColor: emailExists ? '#f43f5e' : 'inherit',
+                      boxShadow: emailExists ? '0 0 0 2px rgba(244, 63, 94, 0.1)' : 'none'
+                    }}
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                  />
+                  {emailExists && (
+                    <p style={{
+                      color: '#f43f5e', fontSize: '12px', marginTop: '4px', fontStyle: 'italic', fontWeight: 'bold',
+                      animation: 'fadeIn 0.3s'
+                    }}>
+                      ⚠️ Account already exists with this email.
+                    </p>
+                  )}
+                  {emailChecking && (
+                    <p style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>Checking Availability...</p>
+                  )}
                 </div>
 
                 <div className="rx-field-group">
@@ -1942,11 +2010,18 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                          dayDiet.dinner = getMealData(d, 'dinner');
                          dayDiet.snack = getMealData(d, 'snack') || getMealData(d, 'snacks');
                       } else if (fullGeneratedPlan?.diet_plan) {
-                         const d = fullGeneratedPlan.diet_plan[dietDayKey] || fullGeneratedPlan.diet_plan[dayKey] || {};
-                         dayDiet.breakfast = typeof d.breakfast === 'object' ? d.breakfast.meal : (d.breakfast || '');
-                         dayDiet.lunch = typeof d.lunch === 'object' ? d.lunch.meal : (d.lunch || '');
-                         dayDiet.dinner = typeof d.dinner === 'object' ? d.dinner.meal : (d.dinner || '');
-                         dayDiet.snack = typeof d.snacks === 'object' ? d.snacks.meal : (d.snacks || '');
+                         const d = fullGeneratedPlan.diet_plan[dietDayKey] || fullGeneratedPlan.diet_plan[dayKey] || [];
+                         if (Array.isArray(d)) {
+                            dayDiet.breakfast = getMealData(d, 'breakfast');
+                            dayDiet.lunch = getMealData(d, 'lunch');
+                            dayDiet.dinner = getMealData(d, 'dinner');
+                            dayDiet.snack = getMealData(d, 'snack') || getMealData(d, 'snacks');
+                         } else {
+                            dayDiet.breakfast = typeof d.breakfast === 'object' ? d.breakfast.meal : (d.breakfast || '');
+                            dayDiet.lunch = typeof d.lunch === 'object' ? d.lunch.meal : (d.lunch || '');
+                            dayDiet.dinner = typeof d.dinner === 'object' ? d.dinner.meal : (d.dinner || '');
+                            dayDiet.snack = typeof d.snacks === 'object' ? d.snacks.meal : (d.snacks || '');
+                         }
                          if (d.hydration) dayDiet.hydration = d.hydration;
                       }
 
@@ -2231,7 +2306,7 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                                           fontFamily: "'Inter', sans-serif",
                                           lineHeight: '1.2'
                                         }}
-                                        rows={1}
+                                        rows={2}
                                       />
                                     </div>
                                   ) : null)}

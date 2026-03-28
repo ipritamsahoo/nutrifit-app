@@ -134,3 +134,21 @@ async def assign_prescription(req: PrescriptionRequest):
         "message": "Prescription assigned successfully!",
         "plan_id": doc_ref.id,
     }
+
+@router.get("/check-email")
+async def check_email(email: str):
+    """
+    Check if a user account already exists in Firebase Auth for a given email.
+    """
+    if not email:
+        return {"exists": False}
+    try:
+        firebase_auth.get_user_by_email(email)
+        return {"exists": True}
+    except firebase_auth.UserNotFoundError:
+        return {"exists": False}
+    except Exception as e:
+        print(f"[Check Email] Error: {e}")
+        # Return false on other errors so it doesn't block UI wrongly,
+        # but let the final check catch real issues
+        return {"exists": False}

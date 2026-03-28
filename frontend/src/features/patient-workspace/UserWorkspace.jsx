@@ -537,7 +537,7 @@ export default function UserWorkspace() {
                   <div className="meal-preview-item" key={mealName}>
                     <span className={`meal-name ${colorClass}`}>{displayName}</span>
                     <span className="meal-divider">—</span>
-                    <span className="meal-content" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span className="meal-content" style={{ whiteSpace: 'normal', color: 'var(--clinical-slate-700)', flex: 1 }}>
                       {mealContent}
                     </span>
                   </div>

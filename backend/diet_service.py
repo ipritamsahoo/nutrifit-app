@@ -10,70 +10,70 @@ import random
 # ---------- FOOD DATASET ----------
 FOODS = {
     "breakfast": [
-        {"name": "Oats with milk", "type": "veg", "tags": ["low_sugar", "light"]},
-        {"name": "Boiled eggs + toast", "type": "non_veg", "tags": ["protein"]},
-        {"name": "Poha", "type": "veg", "tags": ["light"]},
-        {"name": "Upma", "type": "veg", "tags": ["light"]},
-        {"name": "Banana + peanut butter", "type": "veg", "tags": ["energy"]},
-        {"name": "Idli + sambar", "type": "veg", "tags": ["light"]},
-        {"name": "Dosa + chutney", "type": "veg", "tags": ["light"]},
-        {"name": "Roti + sabji", "type": "veg", "tags": ["balanced"]},
-        {"name": "Vegetable sandwich", "type": "veg", "tags": ["light"]},
-        {"name": "Paneer sandwich", "type": "veg", "tags": ["protein"]},
-        {"name": "Boiled eggs + banana", "type": "non_veg", "tags": ["protein"]},
-        {"name": "Sprouts salad", "type": "veg", "tags": ["protein"]},
-        {"name": "Cornflakes with milk", "type": "veg", "tags": ["energy"]},
-        {"name": "Paratha + curd", "type": "veg", "tags": ["energy"]},
-        {"name": "Besan chilla", "type": "veg", "tags": ["protein"]}
+        {"name": "Oats with milk (50g Oats, 200ml Milk)", "type": "veg", "tags": ["low_sugar", "light"], "cal": 430},
+        {"name": "Boiled eggs + toast (2 pc Eggs, 2 slices Bread)", "type": "non_veg", "tags": ["protein"], "cal": 390},
+        {"name": "Poha (1 bowl, 100g)", "type": "veg", "tags": ["light"], "cal": 340},
+        {"name": "Upma (1 bowl, 100g)", "type": "veg", "tags": ["light"], "cal": 330},
+        {"name": "Banana + peanut butter (1 pc Banana, 1 tbsp PB)", "type": "veg", "tags": ["energy"], "cal": 220},
+        {"name": "Idli + sambar (3 pc Idli, 1 bowl Sambar)", "type": "veg", "tags": ["light"], "cal": 330},
+        {"name": "Dosa + chutney (2 pc Dosa, 1/2 bowl Chutney)", "type": "veg", "tags": ["light"], "cal": 350},
+        {"name": "Roti + sabji (2 pc Roti, 1 bowl Veggies)", "type": "veg", "tags": ["balanced"], "cal": 380},
+        {"name": "Vegetable sandwich (2 slices Bread, 50g Veggies)", "type": "veg", "tags": ["light"], "cal": 320},
+        {"name": "Paneer sandwich (2 slices Bread, 40g Paneer)", "type": "veg", "tags": ["protein"], "cal": 400},
+        {"name": "Boiled eggs + banana (2 pc Eggs, 1 pc Banana)", "type": "non_veg", "tags": ["protein"], "cal": 310},
+        {"name": "Sprouts salad (1 bowl, 150g)", "type": "veg", "tags": ["protein"], "cal": 230},
+        {"name": "Cornflakes with milk (50g Flakes, 200ml Milk)", "type": "veg", "tags": ["energy"], "cal": 320},
+        {"name": "Paratha + curd (1 pc Paratha, 1 bowl Curd)", "type": "veg", "tags": ["energy"], "cal": 460},
+        {"name": "Besan chilla (2 pc, 80g)", "type": "veg", "tags": ["protein"], "cal": 360}
     ],
 
     "lunch": [
-        {"name": "Rice + dal + veg", "type": "veg", "tags": ["balanced"]},
-        {"name": "Rice + chicken curry", "type": "non_veg", "tags": ["protein"]},
-        {"name": "Roti + paneer", "type": "veg", "tags": ["protein"]},
-        {"name": "Khichdi", "type": "veg", "tags": ["light"]},
-        {"name": "Fish curry + rice", "type": "non_veg", "tags": ["protein"]},
-        {"name": "Roti + mixed veg", "type": "veg", "tags": ["balanced"]},
-        {"name": "Rice + rajma", "type": "veg", "tags": ["protein"]},
-        {"name": "Rice + chole", "type": "veg", "tags": ["protein"]},
-        {"name": "Grilled chicken + roti", "type": "non_veg", "tags": ["low_fat"]},
-        {"name": "Paneer curry + rice", "type": "veg", "tags": ["protein"]},
-        {"name": "Egg curry + rice", "type": "non_veg", "tags": ["protein"]},
-        {"name": "Vegetable pulao", "type": "veg", "tags": ["energy"]},
-        {"name": "Chicken pulao", "type": "non_veg", "tags": ["energy"]},
-        {"name": "Dal + roti + salad", "type": "veg", "tags": ["balanced"]},
-        {"name": "Fish fry + rice", "type": "non_veg", "tags": ["fried"]}
+        {"name": "Rice + dal + veg (1.5 bowl Rice, 1 bowl Dal, 1 bowl Veg)", "type": "veg", "tags": ["balanced"], "cal": 520},
+        {"name": "Rice + chicken curry (1.5 bowl Rice, 150g Chicken)", "type": "non_veg", "tags": ["protein"], "cal": 690},
+        {"name": "Roti + paneer (3 pc Roti, 100g Paneer)", "type": "veg", "tags": ["protein"], "cal": 620},
+        {"name": "Khichdi (2 bowls, 300g)", "type": "veg", "tags": ["light"], "cal": 480},
+        {"name": "Fish curry + rice (150g Fish, 1.5 bowl Rice)", "type": "non_veg", "tags": ["protein"], "cal": 600},
+        {"name": "Roti + mixed veg (3 pc Roti, 1.5 bowl Veggies)", "type": "veg", "tags": ["balanced"], "cal": 540},
+        {"name": "Rice + rajma (1.5 bowl Rice, 1 bowl Rajma)", "type": "veg", "tags": ["protein"], "cal": 580},
+        {"name": "Rice + chole (1.5 bowl Rice, 1 bowl Chole)", "type": "veg", "tags": ["protein"], "cal": 510},
+        {"name": "Grilled chicken + roti (150g Chicken, 2 pc Roti)", "type": "non_veg", "tags": ["low_fat"], "cal": 560},
+        {"name": "Paneer curry + rice (100g Paneer, 1.5 bowl Rice)", "type": "veg", "tags": ["protein"], "cal": 650},
+        {"name": "Egg curry + rice (2 pc Eggs, 1.5 bowl Rice)", "type": "non_veg", "tags": ["protein"], "cal": 560},
+        {"name": "Vegetable pulao (2 bowls, 300g)", "type": "veg", "tags": ["energy"], "cal": 500},
+        {"name": "Chicken pulao (150g Chicken, 2 bowls Rice)", "type": "non_veg", "tags": ["energy"], "cal": 680},
+        {"name": "Dal + roti + salad (1 bowl Dal, 2 pc Roti, 1 bowl Salad)", "type": "veg", "tags": ["balanced"], "cal": 470},
+        {"name": "Fish fry + rice (120g Fish, 1.5 bowl Rice)", "type": "non_veg", "tags": ["fried"], "cal": 720}
     ],
 
     "dinner": [
-        {"name": "Roti + veg", "type": "veg", "tags": ["light"]},
-        {"name": "Grilled chicken + salad", "type": "non_veg", "tags": ["low_fat"]},
-        {"name": "Soup + salad", "type": "veg", "tags": ["low_calorie"]},
-        {"name": "Paneer + roti", "type": "veg", "tags": ["protein"]},
-        {"name": "Boiled vegetables", "type": "veg", "tags": ["low_calorie"]},
-        {"name": "Dal soup", "type": "veg", "tags": ["light"]},
-        {"name": "Egg omelette + roti", "type": "non_veg", "tags": ["protein"]},
-        {"name": "Vegetable khichdi", "type": "veg", "tags": ["light"]},
-        {"name": "Chicken soup", "type": "non_veg", "tags": ["light"]},
-        {"name": "Paneer salad", "type": "veg", "tags": ["protein"]},
-        {"name": "Grilled fish + veg", "type": "non_veg", "tags": ["low_fat"]},
-        {"name": "Light pulao + raita", "type": "veg", "tags": ["light"]},
-        {"name": "Roti + egg curry", "type": "non_veg", "tags": ["protein"]}
+        {"name": "Roti + veg (2 pc Roti, 1 bowl Veggies)", "type": "veg", "tags": ["light"], "cal": 420},
+        {"name": "Grilled chicken + salad (150g Chicken, 1.5 bowl Salad)", "type": "non_veg", "tags": ["low_fat"], "cal": 480},
+        {"name": "Soup + salad (1 bowl Soup, 1 bowl Salad)", "type": "veg", "tags": ["low_calorie"], "cal": 320},
+        {"name": "Paneer + roti (80g Paneer, 2 pc Roti)", "type": "veg", "tags": ["protein"], "cal": 540},
+        {"name": "Boiled vegetables (2 bowls, 300g)", "type": "veg", "tags": ["low_calorie"], "cal": 280},
+        {"name": "Dal soup (1.5 bowl, 250ml)", "type": "veg", "tags": ["light"], "cal": 350},
+        {"name": "Egg omelette + roti (2 pc Eggs, 1 pc Roti)", "type": "non_veg", "tags": ["protein"], "cal": 460},
+        {"name": "Vegetable khichdi (1.5 bowl, 250g)", "type": "veg", "tags": ["light"], "cal": 440},
+        {"name": "Chicken soup (1 bowl, 250ml)", "type": "non_veg", "tags": ["light"], "cal": 410},
+        {"name": "Paneer salad (100g Paneer, 1 bowl Salad)", "type": "veg", "tags": ["protein"], "cal": 480},
+        {"name": "Grilled fish + veg (120g Fish, 1 bowl Veggies)", "type": "non_veg", "tags": ["low_fat"], "cal": 510},
+        {"name": "Light pulao + raita (1.5 bowl Pulao, 1 bowl Raita)", "type": "veg", "tags": ["light"], "cal": 430},
+        {"name": "Roti + egg curry (2 pc Roti, 1 bowl Egg Curry)", "type": "non_veg", "tags": ["protein"], "cal": 580}
     ],
 
     "snacks": [
-        {"name": "Fruits", "type": "veg", "tags": ["healthy"]},
-        {"name": "Nuts", "type": "veg", "tags": ["energy"]},
-        {"name": "Boiled eggs", "type": "non_veg", "tags": ["protein"]},
-        {"name": "Sprouts", "type": "veg", "tags": ["protein"]},
-        {"name": "Yogurt", "type": "veg", "tags": ["light"]},
-        {"name": "Buttermilk", "type": "veg", "tags": ["light"]},
-        {"name": "Roasted chana", "type": "veg", "tags": ["protein"]},
-        {"name": "Peanut chaat", "type": "veg", "tags": ["energy"]},
-        {"name": "Fruit salad", "type": "veg", "tags": ["healthy"]},
-        {"name": "Protein shake", "type": "veg", "tags": ["protein"]},
-        {"name": "Boiled corn", "type": "veg", "tags": ["light"]},
-        {"name": "Egg sandwich", "type": "non_veg", "tags": ["protein"]}
+        {"name": "Fruits (1 pc Apple/Banana)", "type": "veg", "tags": ["healthy"], "cal": 150},
+        {"name": "Nuts (15-20 pc, Mixed)", "type": "veg", "tags": ["energy"], "cal": 240},
+        {"name": "Boiled eggs (2 pc)", "type": "non_veg", "tags": ["protein"], "cal": 180},
+        {"name": "Sprouts (1 bowl, 100g)", "type": "veg", "tags": ["protein"], "cal": 230},
+        {"name": "Yogurt (1 bowl, 150ml)", "type": "veg", "tags": ["light"], "cal": 220},
+        {"name": "Buttermilk (1 glass, 250ml)", "type": "veg", "tags": ["light"], "cal": 180},
+        {"name": "Roasted chana (1/2 bowl, 50g)", "type": "veg", "tags": ["protein"], "cal": 210},
+        {"name": "Peanut chaat (1/2 bowl, 50g)", "type": "veg", "tags": ["energy"], "cal": 260},
+        {"name": "Fruit salad (1 bowl, 150g)", "type": "veg", "tags": ["healthy"], "cal": 220},
+        {"name": "Protein shake (1 scoop, 30g)", "type": "veg", "tags": ["protein"], "cal": 280},
+        {"name": "Boiled corn (1/2 bowl, 80g)", "type": "veg", "tags": ["light"], "cal": 190},
+        {"name": "Egg sandwich (1 pc Egg, 2 slices Bread)", "type": "non_veg", "tags": ["protein"], "cal": 360}
     ]
 }
 
@@ -140,12 +140,17 @@ def generate_week_plan(filtered: dict, days=7):
         filtered[meal] = random_list
 
     for day in range(days):
-        day_plan = {}
+        day_plan = []
         for meal, items in filtered.items():
             if not items:
                 continue
             index = day % len(items)
-            day_plan[meal] = items[index]["name"]
+            item = items[index]
+            day_plan.append({
+                "meal_type": meal,
+                "name": item["name"],
+                "cal": item["cal"]
+            })
 
         plan[f"day_{day+1}"] = day_plan
 

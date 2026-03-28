@@ -81,102 +81,114 @@ _MEAL_SLOTS = ("breakfast", "lunch", "snack", "dinner")
 _MEAL_LIBRARY = {
     "VEG": {
         "breakfast": [
-            {"id": "veg_protein_oats", "name": "Protein Oats", "cal": 430, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["low_sugar"]},
-            {"id": "veg_paneer_toast", "name": "Paneer Toast", "cal": 400, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "veg_moong_chilla", "name": "Moong Chilla", "cal": 350, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["gentle", "low_sugar"]},
-            {"id": "veg_yogurt_parfait", "name": "Yogurt Parfait", "cal": 320, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
-            {"id": "veg_poha_peanuts", "name": "Poha Peanuts", "cal": 340, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["gentle"]},
-            {"id": "veg_besan_cheela", "name": "Besan Cheela", "cal": 360, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["low_sugar"]},
-            {"id": "veg_tofu_scramble", "name": "Tofu Scramble", "cal": 390, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "veg_idli_sambar", "name": "Idli Sambar", "cal": 330, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
-            {"id": "veg_peanut_smoothie", "name": "Peanut Smoothie", "cal": 460, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "veg_sprout_bowl", "name": "Sprout Bowl", "cal": 300, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["low_sugar", "gentle"]},
+            {"id": "veg_protein_oats", "name": "Protein Oats (50g Oats, 200ml Milk)", "cal": 430, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["low_sugar"]},
+            {"id": "veg_paneer_toast", "name": "Paneer Toast (100g Paneer, 2 pc Bread)", "cal": 400, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_moong_chilla", "name": "Moong Chilla (2 pc, 150g Batter)", "cal": 350, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["gentle", "low_sugar"]},
+            {"id": "veg_yogurt_parfait", "name": "Yogurt Parfait (200g Yogurt, 30g Granola)", "cal": 320, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
+            {"id": "veg_poha_peanuts", "name": "Poha Peanuts (100g Poha, 20g Peanuts)", "cal": 340, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["gentle"]},
+            {"id": "veg_besan_cheela", "name": "Besan Cheela (2 pc, 150g Batter)", "cal": 360, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["low_sugar"]},
+            {"id": "veg_tofu_scramble", "name": "Tofu Scramble (150g Tofu, 2 pc Toast)", "cal": 390, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_idli_sambar", "name": "Idli Sambar (3 pc Idli, 150ml Sambar)", "cal": 330, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
+            {"id": "veg_peanut_smoothie", "name": "Peanut Smoothie (250ml Milk, 2 tbsp PB)", "cal": 460, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "veg_sprout_bowl", "name": "Sprout Bowl (150g Sprouts, 1/2 Lemon)", "cal": 300, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["low_sugar", "gentle"]},
+            {"id": "veg_quinoa_breakfast", "name": "Quinoa Breakfast (100g Quinoa, 100ml Milk)", "cal": 380, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_fruit_salad_large", "name": "Giant Fruit Bowl (300g Mixed Fruits)", "cal": 280, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["low_sodium"]},
         ],
         "lunch": [
-            {"id": "veg_paneer_rice", "name": "Paneer Rice", "cal": 650, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "veg_dal_roti", "name": "Dal Roti", "cal": 520, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
-            {"id": "veg_rajma_rice", "name": "Rajma Rice", "cal": 580, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "veg_tofu_quinoa", "name": "Tofu Quinoa", "cal": 560, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar", "high_protein"]},
-            {"id": "veg_chickpea_salad", "name": "Chickpea Salad", "cal": 430, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["low_sugar", "low_sodium"]},
-            {"id": "veg_veg_khichdi", "name": "Veg Khichdi", "cal": 480, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
-            {"id": "veg_paneer_wrap", "name": "Paneer Wrap", "cal": 540, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "veg_soya_pulao", "name": "Soya Pulao", "cal": 610, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "veg_curd_rice", "name": "Curd Rice", "cal": 450, "goals": ["FLEXIBILITY", "LOSE_WEIGHT", "STAY_FIT"], "flags": ["gentle"]},
-            {"id": "veg_lentil_bowl", "name": "Lentil Bowl", "cal": 500, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["low_sugar", "low_sodium"]},
+            {"id": "veg_paneer_rice", "name": "Paneer Rice (150g Paneer, 1.5 bowl Rice)", "cal": 650, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_dal_roti", "name": "Dal Roti (1 bowl Dal, 2 pc Roti)", "cal": 520, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
+            {"id": "veg_rajma_rice", "name": "Rajma Rice (1.5 bowl Rajma, 1 bowl Rice)", "cal": 580, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "veg_tofu_quinoa", "name": "Tofu Quinoa (150g Tofu, 1 bowl Quinoa)", "cal": 560, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar", "high_protein"]},
+            {"id": "veg_chickpea_salad", "name": "Chickpea Salad (200g Chickpeas, Mixed Veg)", "cal": 430, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["low_sugar", "low_sodium"]},
+            {"id": "veg_veg_khichdi", "name": "Veg Khichdi (2 bowl Khichdi, 50g Curd)", "cal": 480, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
+            {"id": "veg_paneer_wrap", "name": "Paneer Wrap (120g Paneer, 1 pc Whole Wheat Wrap)", "cal": 540, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_soya_pulao", "name": "Soya Pulao (100g Soya, 1 bowl Rice)", "cal": 610, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_curd_rice", "name": "Curd Rice (1 bowl Rice, 150g Curd)", "cal": 450, "goals": ["FLEXIBILITY", "LOSE_WEIGHT", "STAY_FIT"], "flags": ["gentle"]},
+            {"id": "veg_lentil_bowl", "name": "Lentil Bowl (200g Lentils, 1 pc Toast)", "cal": 500, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["low_sugar", "low_sodium"]},
+            {"id": "veg_soya_bhurji", "name": "Soya Bhurji (150g Soya, 2 pc Roti)", "cal": 590, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "veg_mixed_veg_curry", "name": "Mixed Veg Curry (2 bowl Veg, 2 pc Roti)", "cal": 470, "goals": ["STAY_FIT", "FLEXIBILITY"], "flags": ["low_sodium"]},
         ],
         "snack": [
-            {"id": "veg_fruit_yogurt", "name": "Fruit Yogurt", "cal": 220, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["low_sugar"]},
-            {"id": "veg_roasted_chana", "name": "Roasted Chana", "cal": 210, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar", "low_sodium"]},
-            {"id": "veg_peanut_ladoo", "name": "Peanut Ladoo", "cal": 260, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "veg_banana_shake", "name": "Banana Shake", "cal": 300, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "veg_nuts_mix", "name": "Nuts Mix", "cal": 240, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["low_sugar"]},
-            {"id": "veg_sprout_chaat", "name": "Sprout Chaat", "cal": 230, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
-            {"id": "veg_apple_peanut", "name": "Apple Peanut", "cal": 210, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["low_sugar"]},
-            {"id": "veg_protein_milk", "name": "Protein Milk", "cal": 250, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "veg_makhana_mix", "name": "Makhana Mix", "cal": 190, "goals": ["LOSE_WEIGHT", "FLEXIBILITY", "STAY_FIT"], "flags": ["gentle", "low_sodium"]},
-            {"id": "veg_hummus_sticks", "name": "Hummus Sticks", "cal": 230, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
+            {"id": "veg_fruit_yogurt", "name": "Fruit Yogurt (150g Yogurt, 1/2 Apple)", "cal": 220, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["low_sugar"]},
+            {"id": "veg_roasted_chana", "name": "Roasted Chana (50g)", "cal": 210, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar", "low_sodium"]},
+            {"id": "veg_peanut_ladoo", "name": "Peanut Ladoo (2 pc, Small)", "cal": 260, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_banana_shake", "name": "Banana Shake (200ml Milk, 1 pc Banana)", "cal": 300, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "veg_nuts_mix", "name": "Nuts Mix (30g Almonds/Walnuts)", "cal": 240, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["low_sugar"]},
+            {"id": "veg_sprout_chaat", "name": "Sprout Chaat (100g Sprouts, Chat Masala)", "cal": 230, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
+            {"id": "veg_apple_peanut", "name": "Apple Peanut (1 pc Apple, 1 tbsp PB)", "cal": 210, "goals": ["LOSE_WEIGHT", "STAY_FIT", "FLEXIBILITY"], "flags": ["low_sugar"]},
+            {"id": "veg_protein_milk", "name": "Protein Milk (250ml Skimmed Milk)", "cal": 250, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_makhana_mix", "name": "Makhana Mix (40g Roasted Makhana)", "cal": 190, "goals": ["LOSE_WEIGHT", "FLEXIBILITY", "STAY_FIT"], "flags": ["gentle", "low_sodium"]},
+            {"id": "veg_hummus_sticks", "name": "Hummus Sticks (50g Hummus, Carrot Sticks)", "cal": 230, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
         ],
         "dinner": [
-            {"id": "veg_paneer_roti", "name": "Paneer Roti", "cal": 620, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "veg_tofu_stirfry", "name": "Tofu Stirfry", "cal": 520, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
-            {"id": "veg_dal_soup", "name": "Dal Soup", "cal": 430, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
-            {"id": "veg_veg_pulao", "name": "Veg Pulao", "cal": 500, "goals": ["STAY_FIT", "FLEXIBILITY"], "flags": ["gentle"]},
-            {"id": "veg_soya_curry", "name": "Soya Curry", "cal": 560, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "veg_khichdi_bowl", "name": "Khichdi Bowl", "cal": 460, "goals": ["LOSE_WEIGHT", "FLEXIBILITY", "STAY_FIT"], "flags": ["gentle", "low_sodium"]},
-            {"id": "veg_chana_roti", "name": "Chana Roti", "cal": 510, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "veg_palak_paneer", "name": "Palak Paneer", "cal": 540, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "veg_curd_khichdi", "name": "Curd Khichdi", "cal": 420, "goals": ["FLEXIBILITY", "LOSE_WEIGHT"], "flags": ["gentle"]},
-            {"id": "veg_veggie_soup", "name": "Veggie Soup", "cal": 390, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
+            {"id": "veg_paneer_roti", "name": "Paneer Roti (120g Paneer, 2 pc Roti)", "cal": 620, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_tofu_stirfry", "name": "Tofu Stirfry (150g Tofu, Mixed Veg)", "cal": 520, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
+            {"id": "veg_dal_soup", "name": "Dal Soup (2 bowl Dal, 1 pc Garlic Bread)", "cal": 430, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
+            {"id": "veg_veg_pulao", "name": "Veg Pulao (1.5 bowl Pulao, 50g Curd)", "cal": 500, "goals": ["STAY_FIT", "FLEXIBILITY"], "flags": ["gentle"]},
+            {"id": "veg_soya_curry", "name": "Soya Curry (150g Soya, 1 pc Roti)", "cal": 560, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_khichdi_bowl", "name": "Khichdi Bowl (1.5 bowl, Light Salt)", "cal": 460, "goals": ["LOSE_WEIGHT", "FLEXIBILITY", "STAY_FIT"], "flags": ["gentle", "low_sodium"]},
+            {"id": "veg_chana_roti", "name": "Chana Roti (1 bowl Chana, 2 pc Roti)", "cal": 510, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "veg_palak_paneer", "name": "Palak Paneer (150g Paneer, 1 pc Roti)", "cal": 540, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_curd_khichdi", "name": "Curd Khichdi (1 bowl Khichdi, 100g Curd)", "cal": 420, "goals": ["FLEXIBILITY", "LOSE_WEIGHT"], "flags": ["gentle"]},
+            {"id": "veg_veggie_soup", "name": "Veggie Soup (2 bowl Healthy Soup)", "cal": 390, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
+            {"id": "veg_paneer_tikka", "name": "Paneer Tikka (200g, No Oil)", "cal": 480, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "veg_mushroom_stirfry", "name": "Mushroom Stirfry (200g Mushroom, 1 pc Roti)", "cal": 410, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["low_sugar"]},
         ],
     },
     "NON_VEG": {
         "breakfast": [
-            {"id": "nv_egg_toast", "name": "Egg Toast", "cal": 390, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "nv_omelette_wrap", "name": "Omelette Wrap", "cal": 420, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_greek_yogurt", "name": "Greek Yogurt", "cal": 310, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
-            {"id": "nv_egg_oats", "name": "Egg Oats", "cal": 430, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_chicken_sandwich", "name": "Chicken Sandwich", "cal": 410, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_tuna_toast", "name": "Tuna Toast", "cal": 360, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
-            {"id": "nv_boiled_eggs", "name": "Boiled Eggs", "cal": 300, "goals": ["LOSE_WEIGHT", "FLEXIBILITY", "STAY_FIT"], "flags": ["gentle", "high_protein"]},
-            {"id": "nv_chicken_poha", "name": "Chicken Poha", "cal": 440, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_egg_idli", "name": "Egg Idli", "cal": 340, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["gentle"]},
-            {"id": "nv_peanut_eggs", "name": "Peanut Eggs", "cal": 460, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_egg_toast", "name": "Egg Toast (2 pc Egg, 2 pc Bread)", "cal": 390, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_omelette_wrap", "name": "Omelette Wrap (3 pc Egg, 1 pc Wrap)", "cal": 420, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_greek_yogurt", "name": "Greek Yogurt (200g Yogurt, 30g Nuts)", "cal": 310, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
+            {"id": "nv_egg_oats", "name": "Egg Oats (2 pc Egg, 50g Oats)", "cal": 430, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_chicken_sandwich", "name": "Chicken Sandwich (100g Chicken, 2 pc Bread)", "cal": 410, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_tuna_toast", "name": "Tuna Toast (80g Tuna, 2 pc Bread)", "cal": 360, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
+            {"id": "nv_boiled_eggs", "name": "Boiled Eggs (4 pc Eggs, No Yolk)", "cal": 300, "goals": ["LOSE_WEIGHT", "FLEXIBILITY", "STAY_FIT"], "flags": ["gentle", "high_protein"]},
+            {"id": "nv_chicken_poha", "name": "Chicken Poha (100g Poha, 50g Chicken)", "cal": 440, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_egg_idli", "name": "Egg Idli (2 pc Idli, 2 pc Egg)", "cal": 340, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["gentle"]},
+            {"id": "nv_peanut_eggs", "name": "Peanut Eggs (3 pc Egg, 1 tbsp PB)", "cal": 460, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_salmon_breakfast", "name": "Salmon Toast (80g Salmon, 1 pc Bread)", "cal": 380, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_chicken_smoothie", "name": "Protein Smoothie (30g Whey, 250ml Milk)", "cal": 350, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
         ],
         "lunch": [
-            {"id": "nv_chicken_rice", "name": "Chicken Rice", "cal": 690, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_grilled_chicken", "name": "Grilled Chicken", "cal": 520, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
-            {"id": "nv_fish_rice", "name": "Fish Rice", "cal": 600, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "nv_tuna_salad", "name": "Tuna Salad", "cal": 430, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["low_sugar", "low_sodium"]},
-            {"id": "nv_egg_curry", "name": "Egg Curry", "cal": 560, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "nv_chicken_quinoa", "name": "Chicken Quinoa", "cal": 540, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
-            {"id": "nv_fish_khichdi", "name": "Fish Khichdi", "cal": 500, "goals": ["FLEXIBILITY", "STAY_FIT"], "flags": ["gentle"]},
-            {"id": "nv_chicken_wrap", "name": "Chicken Wrap", "cal": 570, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_egg_bowl", "name": "Egg Bowl", "cal": 510, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_turkey_rice", "name": "Turkey Rice", "cal": 630, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_chicken_rice", "name": "Chicken Rice (200g Chicken, 1.5 bowl Rice)", "cal": 690, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_grilled_chicken", "name": "Grilled Chicken (200g Chicken, 1 bowl Veg)", "cal": 520, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
+            {"id": "nv_fish_rice", "name": "Fish Rice (150g Fish, 1.5 bowl Rice)", "cal": 600, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_tuna_salad", "name": "Tuna Salad (150g Tuna, Large Bowl Veg)", "cal": 430, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["low_sugar", "low_sodium"]},
+            {"id": "nv_egg_curry", "name": "Egg Curry (3 pc Egg, 1 bowl Rice)", "cal": 560, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_chicken_quinoa", "name": "Chicken Quinoa (150g Chicken, 1 bowl Quinoa)", "cal": 540, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
+            {"id": "nv_fish_khichdi", "name": "Fish Khichdi (1 bowl, 100g Fish)", "cal": 500, "goals": ["FLEXIBILITY", "STAY_FIT"], "flags": ["gentle"]},
+            {"id": "nv_chicken_wrap", "name": "Chicken Wrap (150g Chicken, 1 pc Wrap)", "cal": 570, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_egg_bowl", "name": "Egg Bowl (4 pc Egg, 50g Curd)", "cal": 510, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_turkey_rice", "name": "Turkey Rice (200g Turkey, 1 bowl Rice)", "cal": 630, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_chicken_pasta", "name": "Chicken Pasta (100g Chicken, 1.5 bowl Pasta)", "cal": 650, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_fish_tacos", "name": "Fish Tacos (2 pc, 100g Fish)", "cal": 580, "goals": ["STAY_FIT", "LOSE_WEIGHT"], "flags": ["high_protein"]},
         ],
         "snack": [
-            {"id": "nv_greek_nuts", "name": "Greek Nuts", "cal": 240, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
-            {"id": "nv_boiled_egg", "name": "Boiled Egg", "cal": 180, "goals": ["LOSE_WEIGHT", "FLEXIBILITY", "STAY_FIT"], "flags": ["gentle", "high_protein"]},
-            {"id": "nv_tuna_cracker", "name": "Tuna Cracker", "cal": 230, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "nv_chicken_soup", "name": "Chicken Soup", "cal": 210, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
-            {"id": "nv_protein_shake", "name": "Protein Shake", "cal": 280, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "nv_egg_salad", "name": "Egg Salad", "cal": 220, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar", "high_protein"]},
-            {"id": "nv_curd_chicken", "name": "Curd Chicken", "cal": 250, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_fruit_yogurt", "name": "Fruit Yogurt", "cal": 220, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
-            {"id": "nv_egg_wrap", "name": "Egg Wrap", "cal": 260, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_fish_cup", "name": "Fish Cup", "cal": 230, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
+            {"id": "nv_greek_nuts", "name": "Greek Nuts (200g Yogurt, 20g Nuts)", "cal": 240, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
+            {"id": "nv_boiled_egg", "name": "Boiled Egg (2 pc)", "cal": 180, "goals": ["LOSE_WEIGHT", "FLEXIBILITY", "STAY_FIT"], "flags": ["gentle", "high_protein"]},
+            {"id": "nv_tuna_cracker", "name": "Tuna Cracker (50g Tuna, 4 pc Crackers)", "cal": 230, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_chicken_soup", "name": "Chicken Soup (1.5 bowl Healthy Soup)", "cal": 210, "goals": ["LOSE_WEIGHT", "FLEXIBILITY"], "flags": ["gentle", "low_sodium"]},
+            {"id": "nv_protein_shake", "name": "Protein Shake (1 scoop, 300ml Water)", "cal": 280, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_egg_salad", "name": "Egg Salad (2 pc Egg, Mixed Greens)", "cal": 220, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar", "high_protein"]},
+            {"id": "nv_curd_chicken", "name": "Curd Chicken (100g Chicken, 50g Curd)", "cal": 250, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_fruit_yogurt", "name": "Fruit Yogurt (150g Yogurt, 1/2 Banana)", "cal": 220, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["low_sugar"]},
+            {"id": "nv_egg_wrap", "name": "Egg Wrap (2 pc Egg, 1 pc Mini Wrap)", "cal": 260, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_fish_cup", "name": "Fish Cup (50g Steamed Fish)", "cal": 230, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
         ],
         "dinner": [
-            {"id": "nv_grilled_fish", "name": "Grilled Fish", "cal": 540, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
-            {"id": "nv_chicken_roti", "name": "Chicken Roti", "cal": 610, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_egg_bhurji", "name": "Egg Bhurji", "cal": 500, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "nv_fish_soup", "name": "Fish Soup", "cal": 430, "goals": ["FLEXIBILITY", "LOSE_WEIGHT"], "flags": ["gentle", "low_sodium"]},
-            {"id": "nv_chicken_stirfry", "name": "Chicken Stirfry", "cal": 520, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
-            {"id": "nv_turkey_wrap", "name": "Turkey Wrap", "cal": 560, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
-            {"id": "nv_chicken_khichdi", "name": "Chicken Khichdi", "cal": 470, "goals": ["FLEXIBILITY", "STAY_FIT"], "flags": ["gentle"]},
-            {"id": "nv_tuna_bowl", "name": "Tuna Bowl", "cal": 490, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
-            {"id": "nv_egg_rice", "name": "Egg Rice", "cal": 530, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
-            {"id": "nv_fish_roti", "name": "Fish Roti", "cal": 580, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_grilled_fish", "name": "Grilled Fish (200g Fish, Mixed Veg)", "cal": 540, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
+            {"id": "nv_chicken_roti", "name": "Chicken Roti (150g Chicken, 2 pc Roti)", "cal": 610, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_egg_bhurji", "name": "Egg Bhurji (4 pc Egg, 1 pc Roti)", "cal": 500, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_fish_soup", "name": "Fish Soup (2 bowl Soup, 1 pc Toast)", "cal": 430, "goals": ["FLEXIBILITY", "LOSE_WEIGHT"], "flags": ["gentle", "low_sodium"]},
+            {"id": "nv_chicken_stirfry", "name": "Chicken Stirfry (150g Chicken, 50g Cashews)", "cal": 520, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
+            {"id": "nv_turkey_wrap", "name": "Turkey Wrap (150g Turkey, 1 pc Wrap)", "cal": 560, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_chicken_khichdi", "name": "Chicken Khichdi (1.5 bowl, 100g Chicken)", "cal": 470, "goals": ["FLEXIBILITY", "STAY_FIT"], "flags": ["gentle"]},
+            {"id": "nv_tuna_bowl", "name": "Tuna Bowl (150g Tuna, 50g Quinoa)", "cal": 490, "goals": ["LOSE_WEIGHT", "STAY_FIT"], "flags": ["high_protein", "low_sugar"]},
+            {"id": "nv_egg_rice", "name": "Egg Rice (3 pc Egg, 1 bowl Rice)", "cal": 530, "goals": ["STAY_FIT", "BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_fish_roti", "name": "Fish Roti (150g Fish, 1 pc Roti)", "cal": 580, "goals": ["BUILD_MUSCLE", "STAY_FIT"], "flags": ["high_protein"]},
+            {"id": "nv_chicken_legs", "name": "Grilled Chicken Legs (2 pc, Large)", "cal": 590, "goals": ["BUILD_MUSCLE"], "flags": ["high_protein"]},
+            {"id": "nv_prawn_curry", "name": "Prawn Curry (150g Prawns, 1 pc Roti)", "cal": 460, "goals": ["STAY_FIT", "LOSE_WEIGHT"], "flags": ["high_protein"]},
         ],
     },
 }
@@ -687,6 +699,7 @@ def _build_doctor_tpl_prompt(
             '- every ex item must use the exact format "Name|SetsxReps|rRestSeconds"',
             "- use lowercase x, numeric reps or seconds like 30s, and numeric rest like r60",
             "- no schedule, no rest-day plan, no diet, no notes, no markdown, no extra keys",
+            "CRITICAL: RETURN ONLY RAW JSON. DO NOT WRITE ANY CONVERSATIONAL TEXT BEFORE OR AFTER.",
         ]
     )
 
@@ -977,9 +990,12 @@ def _build_filtered_fallback_tpl(
 
     def _build_template(template_key: str, day_index: int, avoid_names: set[str] | None = None) -> dict[str, Any]:
         meta_block = cast(Dict[str, Any], meta.get(template_key, {}))
+        # Add a random component to the seed to ensure variety as requested by user
+        # This prevents the fallback from looking "too static"
+        random_seed = random.randint(1, 1000)
         selected_names = _pick_day_exercises(
             canonical_pool,
-            f"{goal_key}:{template_key}:{session_time or requested_duration}",
+            f"{goal_key}:{template_key}:{session_time or requested_duration}:{random_seed}",
             avoid_names,
         )
         prescribed = [
@@ -1485,9 +1501,11 @@ def generate_plan(
     session_time: Optional[str] = None,
     injuries: Optional[List[str]] = None,
     intensity: Optional[str] = None,
+    force_deterministic_fallback: bool = False,
 ) -> Dict[str, Any]:
     """
     Main entry point for plan generation.
+    - If force_deterministic_fallback is True, skip AI and use Smart Fallback.
     - If Doctor Dashboard inputs (workout_goal, etc.) are present, use AI-assisted filtering (V2).
     - Otherwise, use the legacy deterministic/fallback flow for the outsider chatbot.
     """
@@ -1495,11 +1513,35 @@ def generate_plan(
     
     # DOCTOR DASHBOARD PATH: If we have specific workout inputs, use Smart AI route
     if workout_goal and equipment:
-        print(f"[AI Service] Using Smart V2 Filter Route for Doctor Dashboard...")
-        
-        # 1. Smart Filter from V2 Data with Injury Exclusion & Difficulty
         fitness_level_str = (fitness_level or "beginner").strip().lower()
         v2_filtered = _get_v2_filtered_exercises(workout_goal, equipment, target_areas, injuries, fitness_level_str)
+
+        if force_deterministic_fallback:
+            print(f"[AI Service] FORCED Deterministic Fallback for {workout_goal}...")
+            fallback_tpl = _build_filtered_fallback_tpl(
+                workout_goal,
+                medical_conditions,
+                v2_filtered,
+                session_time or "",
+            )
+            weekly_plan = _build_weekly_templates(workout_goal, medical_conditions, fallback_tpl, {}, workout_days or "")
+            return {
+                "profile_hash": profile_hash,
+                "plan": {
+                    "schema_version": 2,
+                    "goal": _normalize_goal(workout_goal),
+                    "sched": weekly_plan["sched"],
+                    "tpl": weekly_plan["tpl"],
+                    "diet": _build_demo_diet(age, weight, height, goal, medical_conditions, diet_preference),
+                    "allowed_exercises": v2_filtered,
+                    "notes": (
+                        f"High-Precision Optimized Plan ({fitness_level}). Frequency: {workout_days}. "
+                        f"Generated via NutriFit Smart-Engine."
+                    ),
+                }
+            }
+
+        print(f"[AI Service] Using Smart V2 Filter Route for Doctor Dashboard...")
         
         # 2. Build AI Prompt for LLM
         # We allow the AI to use any of the up to 30 returned exercises for both A and B
@@ -1533,9 +1575,11 @@ def generate_plan(
                 print(f"[AI Service] Calling Doctor AI ({DOCTOR_MODEL}) (Attempt {attempt + 1}/3)...")
                 response = client.chat.completions.create(
                     model=DOCTOR_MODEL,
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[
+                        {"role": "system", "content": "You are a rigid API engine. You MUST output exclusively raw JSON. Do NOT include markdown blocks, pleasantries, or conversational text. Ever."},
+                        {"role": "user", "content": prompt}
+                    ],
                     temperature=0.1,
-                    max_tokens=800,
                 )
                 
                 if not response.choices:
