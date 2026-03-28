@@ -17,17 +17,17 @@ const API_URL = 'http://127.0.0.1:8000';
 // Quick reply options mapped to question keywords (ORDER MATTERS — first match wins)
 const QUICK_REPLIES = [
   { keywords: ['goal', 'objective', 'achieve', 'looking to', 'fitness goal'], options: ['🏋️ Build Muscle', '🔥 Lose Weight', '💪 Stay Fit', '🧘 Flexibility'] },
-  { keywords: ['equipment', 'gym', 'access to'],                              options: ['🏠 No Equipment', '🏋️ With Equipment'] },
-  { keywords: ['food', 'diet', 'veg or', 'non-veg', 'food preference'],       options: ['🥬 Veg', '🍗 Non-Veg'] },
-  { keywords: ['medical', 'injur', 'health issue', 'condition'],              options: ['✅ No Issues', 'Back Pain', 'Knee Injury', 'Shoulder Issue'] },
-  { keywords: ['focus', 'body part', 'specific area', 'particular area'],     options: ['Full Body', 'Upper Body', 'Chest & Arms', 'Abs & Core', 'Legs'] },
+  { keywords: ['equipment', 'gym', 'access to'], options: ['🏠 No Equipment', '🏋️ With Equipment'] },
+  { keywords: ['food', 'diet', 'veg or', 'non-veg', 'food preference'], options: ['🥬 Veg', '🍗 Non-Veg'] },
+  { keywords: ['medical', 'injur', 'health issue', 'condition'], options: ['✅ No Issues', 'Back Pain', 'Knee Injury', 'Shoulder Issue'] },
+  { keywords: ['focus', 'body part', 'specific area', 'particular area'], options: ['Full Body', 'Upper Body', 'Chest & Arms', 'Abs & Core', 'Legs'] },
   { keywords: ['how old', 'your age', 'what is your age', "what's your age"], options: ['18', '20', '22', '25', '30', '35'] },
-  { keywords: ['your height', 'how tall', 'tall are you'],                    options: ['5\'4"', '5\'6"', '5\'8"', '5\'10"', '6\'0"', '6\'2"'] },
-  { keywords: ['your weight', 'how much do you weigh', 'weigh'],              options: ['55 kg', '60 kg', '65 kg', '70 kg', '75 kg', '80 kg', '85 kg'] },
-  { keywords: ['water', 'drink', 'hydrat'],                                   options: ['1-2 liters', '2-3 liters', '3+ liters', 'Not enough'] },
-  { keywords: ['sleep', 'hours of sleep', 'rest'],                            options: ['4-5 hours', '6-7 hours', '7-8 hours', '8+ hours'] },
-  { keywords: ['sitting', 'desk', 'active during', 'sedentary'],              options: ['🪑 Desk Job', '🚶 Moderately Active', '🏃 Very Active'] },
-  { keywords: ['stress', 'stress level'],                                     options: ['😌 Low', '😐 Moderate', '😰 High'] },
+  { keywords: ['your height', 'how tall', 'tall are you'], options: ['5\'4"', '5\'6"', '5\'8"', '5\'10"', '6\'0"', '6\'2"'] },
+  { keywords: ['your weight', 'how much do you weigh', 'weigh'], options: ['55 kg', '60 kg', '65 kg', '70 kg', '75 kg', '80 kg', '85 kg'] },
+  { keywords: ['water', 'drink', 'hydrat'], options: ['1-2 liters', '2-3 liters', '3+ liters', 'Not enough'] },
+  { keywords: ['sleep', 'hours of sleep', 'rest'], options: ['4-5 hours', '6-7 hours', '7-8 hours', '8+ hours'] },
+  { keywords: ['sitting', 'desk', 'active during', 'sedentary'], options: ['🪑 Desk Job', '🚶 Moderately Active', '🏃 Very Active'] },
+  { keywords: ['stress', 'stress level'], options: ['😌 Low', '😐 Moderate', '😰 High'] },
 ];
 
 export default function OutsiderChatbot() {
@@ -38,7 +38,7 @@ export default function OutsiderChatbot() {
   const [messages, setMessages] = useState([
     {
       role: 'model',
-      text: `Hey ${userData?.name || 'there'}! 👋 I'm your HonFit Virtual Coach. I'm here to create a personalized fitness and diet plan just for you! Let's get started.`,
+      text: `Hey ${userData?.name || 'there'}! 👋 I'm your NutriFit Virtual Coach. I'm here to create a personalized fitness and diet plan just for you! Let's get started.`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -108,20 +108,20 @@ export default function OutsiderChatbot() {
     // Extremely broad keyword detection to catch any AI rephrasing
     const muscleKeywords = [
       'specific muscle', 'muscle group', 'target muscle', 'focus on',
-      'particular muscle', 'body part', 'muscle ke specific', 
+      'particular muscle', 'body part', 'muscle ke specific',
       'specific korte', 'any muscles', 'focus areas', 'areas of your body',
       'focus area', 'target area', 'particular body part', 'focus on certain',
       'prioritize any', 'target part', 'body areas', 'specific parts',
       'kono muscle', 'kono body part', 'focus korte chao', 'target korte chao'
     ];
-    
+
     const lowerResp = responseText.toLowerCase();
     console.log("[Chatbot Debug] AI Response:", lowerResp);
-    
+
     // Also trigger if the string contains both "target" AND "muscle", or "focus" AND "muscle"
     const hasFocusMuscleCombo = (lowerResp.includes('target') || lowerResp.includes('focus')) && lowerResp.includes('muscle');
     const isMuscleQuestion = hasFocusMuscleCombo || muscleKeywords.some(kw => lowerResp.includes(kw));
-    
+
     if (isMuscleQuestion) {
       console.log("[Chatbot Debug] ✨ Muscle question detected! Triggering widget.");
       muscleMapUsed.current = true;
@@ -134,14 +134,14 @@ export default function OutsiderChatbot() {
     if (loading || detectedPlan) return null;
     const lastBotMsg = [...messages].reverse().find(m => m.role === 'model' && !m.hidden);
     if (!lastBotMsg) return null;
-    
+
     // Focus on the LAST question sentence to avoid matching old context
     // e.g. "Thanks for confirming your goal! Now, what equipment do you have?"
     const fullText = lastBotMsg.text.toLowerCase();
     const sentences = fullText.split(/[.!]\s*/);
     // Use the last 1-2 sentences (where the actual question is)
     const questionPart = sentences.slice(-2).join(' ');
-    
+
     for (const qr of QUICK_REPLIES) {
       if (qr.keywords.some(kw => questionPart.includes(kw))) {
         return qr.options;
@@ -156,7 +156,7 @@ export default function OutsiderChatbot() {
     setInput(text);
     // Use a tiny timeout so React updates input state before submit
     setTimeout(() => {
-      const fakeEvent = { preventDefault: () => {} };
+      const fakeEvent = { preventDefault: () => { } };
       // Directly send the message
       const userMsg = { role: 'user', text };
       const updatedMessages = [...messages, userMsg];
@@ -321,9 +321,9 @@ export default function OutsiderChatbot() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Chat failed');
       setMessages(prev => [...prev, { role: 'model', text: data.response }]);
-      
+
       checkForMuscleQuestion(data.response);
-      
+
       if (data.plan_detected && data.plan) {
         setDetectedPlan(data.plan);
         setDetectedPlanId(data.plan_id);
@@ -373,8 +373,7 @@ export default function OutsiderChatbot() {
       {/* Header */}
       <header className="chat-header">
         <div className="chat-brand">
-          <span>🤖</span>
-          <h1>HonFit — Virtual Coach</h1>
+          <h1>NUTRIFIT <span style={{ color: 'var(--nf-primary)', fontSize: '13px', fontWeight: 'bold' }}>PRO</span></h1>
         </div>
         <div className="chat-actions">
           <button className="btn-dashboard" onClick={() => navigate('/workspace')}>
@@ -393,12 +392,20 @@ export default function OutsiderChatbot() {
 
             return (
               <div key={i} className={`chat-bubble ${msg.role === 'user' ? 'user-bubble' : 'bot-bubble'}`}>
-                {msg.role === 'model' && <div className="bubble-avatar">🤖</div>}
+                {msg.role === 'model' && <div className="bubble-avatar" style={{ color: 'var(--nf-primary)' }}>✦</div>}
+                
+                {msg.role === 'user' && (
+                  <div className="bubble-avatar user-avatar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                  </div>
+                )}
+
                 <div
                   className="bubble-text"
                   dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }}
                 />
-                {msg.role === 'user' && <div className="bubble-avatar user-avatar">🙂</div>}
               </div>
             );
           })}
@@ -406,7 +413,7 @@ export default function OutsiderChatbot() {
           {/* Loading indicator */}
           {loading && (
             <div className="chat-bubble bot-bubble">
-              <div className="bubble-avatar">🤖</div>
+              <div className="bubble-avatar" style={{ color: 'var(--nf-primary)' }}>✦</div>
               <div className="bubble-text typing-indicator">
                 <span></span><span></span><span></span>
               </div>
@@ -423,16 +430,20 @@ export default function OutsiderChatbot() {
 
           {/* Plan detected banner */}
           {detectedPlan && (
-            <div className="plan-detected-card">
-              <div className="pdc-icon">🎯</div>
-              <h3>Your Personalized Plan is Ready!</h3>
-              <p>Your AI coach has created a complete 7-day fitness and diet plan for you.</p>
-              <div className="pdc-actions">
-                <button className="btn-primary" onClick={handleApprovePlan} disabled={approving}>
-                  {approving ? 'Saving…' : '✅ Approve & Go to Workspace'}
+            <div className="plan-detected-banner">
+              <div className="pdb-content">
+                <span className="pdb-icon">✨</span>
+                <div className="pdb-text">
+                  <h3>Plan Ready</h3>
+                  <p>A 7-day fitness & nutrition guide is optimized for you.</p>
+                </div>
+              </div>
+              <div className="pdb-actions">
+                <button className="btn-approve" onClick={handleApprovePlan} disabled={approving}>
+                  {approving ? 'Saving...' : 'Approve & Save'}
                 </button>
-                <button className="btn-outline-sm" onClick={handleModifyPlan}>
-                  🔄 Modify Plan
+                <button className="btn-modify" onClick={handleModifyPlan}>
+                  Modify
                 </button>
               </div>
             </div>

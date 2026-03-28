@@ -32,7 +32,7 @@ client = OpenAI(
     timeout=30.0, # Increased timeout
     default_headers={
         "HTTP-Referer": "http://localhost:5173",
-        "X-Title": "HonFit Plan Generator",
+        "X-Title": "NutriFit Plan Generator",
     }
 )
 
