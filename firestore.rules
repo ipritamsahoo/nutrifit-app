@@ -1,4 +1,4 @@
-// Firestore Security Rules for HonFit
+// Firestore Security Rules for NutriFit
 // =====================================
 // Copy-paste these rules into Firebase Console → Firestore → Rules → Publish.
 

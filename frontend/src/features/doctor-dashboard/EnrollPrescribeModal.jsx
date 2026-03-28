@@ -332,6 +332,48 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [currentLoadingDay, setCurrentLoadingDay] = useState(0);
   const [allowedExercises, setAllowedExercises] = useState([]);
+  const [editDayIndex, setEditDayIndex] = useState(null); // Per-day edit index
+  const [editingExIdx, setEditingExIdx] = useState(null); // Per-exercise edit index
+  const [pendingRemovals, setPendingRemovals] = useState([]); // Exercises to be removed on "Done"
+
+  const toggleEdit = (i) => {
+    if (editDayIndex === i) {
+      // "Done" clicked: Apply pending removals first
+      if (pendingRemovals.length > 0) {
+        setFullGeneratedPlan(prev => {
+          if (!prev) return prev;
+          
+          // DEEP COPY to prevent mutation bugs
+          const updated = JSON.parse(JSON.stringify(prev));
+          const dayK = updated.sched?.[i];
+          if (!dayK || !updated.tpl) return prev;
+
+          // Fork the template if it's shared to avoid affecting other days
+          const sharedDays = updated.sched.filter(k => k === dayK).length;
+          let targetKey = dayK;
+          if (sharedDays > 1) {
+            targetKey = `${dayK}_forked_${Date.now()}`;
+            updated.sched[i] = targetKey;
+            updated.tpl[targetKey] = JSON.parse(JSON.stringify(updated.tpl[dayK]));
+          }
+
+          const daySched = updated.tpl[targetKey];
+          if (daySched && daySched.ex) {
+            // Filter out pending removals
+            daySched.ex = daySched.ex.filter((_, idx) => !pendingRemovals.includes(idx));
+          }
+          return updated;
+        });
+      }
+      setEditDayIndex(null);
+      setEditingExIdx(null);
+      setPendingRemovals([]);
+    } else {
+      setEditDayIndex(i);
+      setEditingExIdx(null);
+      setPendingRemovals([]);
+    }
+  };
 
   /* ── Close on ESC ──────────────────────────────────── */
   useEffect(() => {
@@ -349,15 +391,28 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
   }
 
   /* ── Full Plan Edits ───────────────────────────────── */
-  function updateFullPlanExercise(dayKey, exIndex, field, value) {
+  function updateFullPlanExercise(dayIndex, exIndex, field, value) {
     setFullGeneratedPlan(prev => {
-      if (!prev || !prev.tpl || !prev.tpl[dayKey]) return prev;
-      const newPlan = { ...prev };
-      const newTpl = { ...newPlan.tpl };
-      const newDay = { ...newTpl[dayKey] };
-      const newExs = [...(newDay.ex || [])];
+      if (!prev || !prev.sched || !prev.tpl) return prev;
       
+      const updated = JSON.parse(JSON.stringify(prev));
+      const dayK = updated.sched[dayIndex];
+      if (!dayK || !updated.tpl[dayK]) return prev;
+
+      let targetKey = dayK;
+      const sharedDays = updated.sched.filter(k => k === dayK).length;
+
+      // FORK if shared, so edit doesn't hit other days
+      if (sharedDays > 1) {
+        targetKey = `${dayK}_forked_${Date.now()}`;
+        updated.sched[dayIndex] = targetKey;
+        updated.tpl[targetKey] = JSON.parse(JSON.stringify(updated.tpl[dayK]));
+      }
+
+      const daySched = updated.tpl[targetKey];
+      const newExs = [...(daySched.ex || [])];
       const targetEx = newExs[exIndex];
+
       if (typeof targetEx === 'string') {
         const parts = targetEx.split('|');
         if (field === 'name') parts[0] = value;
@@ -368,10 +423,8 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
         newExs[exIndex] = { ...targetEx, [field]: value };
       }
       
-      newDay.ex = newExs;
-      newTpl[dayKey] = newDay;
-      newPlan.tpl = newTpl;
-      return newPlan;
+      daySched.ex = newExs;
+      return updated;
     });
   }
 
@@ -430,6 +483,36 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
   }, [generating]);
 
   /* ── AI Generate ───────────────────────────────────── */
+  const isValidExercise = (name) => {
+    if (!name || name.trim() === '') return false;
+    return allowedExercises.some(ex => ex.toLowerCase() === name.toLowerCase());
+  };
+
+  const getGhostSuggestion = (input) => {
+    if (!input || input.trim() === '') return '';
+    const match = allowedExercises.find(ex => 
+      ex.toLowerCase().startsWith(input.toLowerCase())
+    );
+    if (match && match.toLowerCase() !== input.toLowerCase()) {
+      return match.slice(input.length);
+    }
+    return '';
+  };
+
+  const isPlanValid = () => {
+    if (!fullGeneratedPlan || !fullGeneratedPlan.sched || !fullGeneratedPlan.tpl) return true;
+    for (const dayKey of fullGeneratedPlan.sched) {
+      const template = fullGeneratedPlan.tpl[dayKey];
+      if (template && template.ex) {
+        for (const exData of template.ex) {
+          const name = typeof exData === 'string' ? exData.split('|')[0] : exData.name;
+          if (!isValidExercise(name)) return false;
+        }
+      }
+    }
+    return true;
+  };
+
   async function generateAI() {
     setGenerating(true);
     setShowFullPreview(true); // Open the preview overlay immediately
@@ -1674,10 +1757,10 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
               background: '#f8fafc'
             }}>
               <div>
-                <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.02em' }}>
+                <h3 style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.02em', fontFamily: "'Inter', sans-serif" }}>
                   {generating ? '✨ AI is Crafting Your Schedule...' : 'Personalized 7-Day Schedule'}
                 </h3>
-                <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
+                <p style={{ fontSize: '15px', color: '#64748b', marginTop: '4px', fontFamily: "'Inter', sans-serif" }}>
                   {generating ? 'Analyzing data and mapping optimal training volume...' : 'Full workout rotation generated by AI'}
                 </p>
               </div>
@@ -1697,8 +1780,8 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
               {/* ── 7-Day Protocol Section ────────── */}
               {(planType === 'exercise' || planType === 'both' || planType === 'diet') && (
                 <div style={{ 
-                  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
-                  gap: '24px' 
+                  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', 
+                  gap: '16px' 
                 }}>
                   {generating ? (
                     /* Skeleton State: Show 7 pulse cards with staggered delays and varied widths */
@@ -1711,13 +1794,13 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                         <div key={i} className={isActive ? 'rx-active-day' : ''} style={{
                           background: isDone ? '#fff' : (isActive ? '#fff' : 'rgba(248, 250, 252, 0.5)'), 
                           border: isActive ? '2px solid #3b82f6' : (isDone ? '1.5px solid #22c55e' : '1px solid #e2e8f0'),
-                          borderRadius: '24px', padding: '24px', minHeight: '300px',
-                          display: 'flex', flexDirection: 'column', gap: '20px',
+                          borderRadius: '12px', padding: '10px', minHeight: '160px',
+                          display: 'flex', flexDirection: 'column', gap: '6px',
                           boxShadow: isActive ? '0 10px 25px -5px rgba(59, 130, 246, 0.2)' : '0 4px 6px -1px rgba(0,0,0,0.05)',
                           opacity: isWait ? 0.6 : 1,
                           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                           position: 'relative',
-                          marginBottom: '10px' // Added buffer to prevent row conflict
+                          marginBottom: '4px'
                         }}>
                           {/* Day & Status Header */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1801,67 +1884,260 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                         <div key={index} style={{
                           background: isRest ? 'rgba(241, 245, 249, 0.5)' : '#fff',
                           border: isRest ? '2px dashed #cbd5e1' : '1px solid #e2e8f0',
-                          borderRadius: '20px', padding: '20px', position: 'relative',
+                          borderRadius: '12px', padding: '10px', position: 'relative',
                           boxShadow: isRest ? 'none' : '0 10px 15px -3px rgba(0,0,0,0.1)',
                           transition: 'transform 0.2s',
-                          minHeight: '300px', // Ensure consistent row spacing
-                          display: 'flex', flexDirection: 'column'
+                          minHeight: '160px',
+                          display: 'flex', flexDirection: 'column', gap: '6px'
                         }}>
                           <div style={{ 
                             display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', 
-                            marginBottom: '16px' 
+                            marginBottom: '4px' 
                           }}>
-                            <span style={{ fontSize: '13px', fontWeight: '800', color: isRest ? '#64748b' : '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <span style={{ 
+                              fontSize: '14px', fontWeight: '900', color: isRest ? '#64748b' : '#2563eb', 
+                              textTransform: 'uppercase', letterSpacing: '0.05em',
+                              fontFamily: "'Inter', sans-serif"
+                            }}>
                               Day {index + 1}
                             </span>
-                            {dayEntry?.dur && planType !== 'diet' && (
-                              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>⏱️ {dayEntry.dur} min</span>
+                            {!isRest && !generating && (
+                              <button
+                                onClick={() => toggleEdit(index)}
+                                style={{
+                                  fontSize: '11px', fontWeight: '700', padding: '4px 10px',
+                                  borderRadius: '8px', background: '#f1f5f9', border: '1px solid #e2e8f0',
+                                  cursor: 'pointer', transition: 'all 0.2s', color: '#475569',
+                                  fontFamily: "'Inter', sans-serif"
+                                }}
+                              >
+                                {editDayIndex === index ? "Done" : "Edit"}
+                              </button>
                             )}
                           </div>
                           
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
                             
                             {/* Workout Section */}
                             {(planType === 'exercise' || planType === 'both') && (
                               isRest ? (
-                                <div style={{ padding: '20px 0', textAlign: 'center', background: '#f8fafc', borderRadius: '12px' }}>
-                                  <span style={{ fontSize: '24px' }}>🛌</span>
-                                  <p style={{ fontSize: '12px', fontWeight: '800', color: '#64748b', marginTop: '8px' }}>Rest & Recovery</p>
+                                <div style={{ 
+                                  padding: '28px 0', 
+                                  textAlign: 'center', 
+                                  background: '#f8fafc', 
+                                  borderRadius: '16px',
+                                  border: '1px dashed #cbd5e1',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '8px'
+                                }}>
+                                  <span style={{ fontSize: '18px' }}>🛌</span>
+                                  <p style={{ fontSize: '12px', fontWeight: '800', color: '#64748b', margin: 0, opacity: 0.8 }}>Rest & Recovery</p>
                                 </div>
                               ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                   {exercises.map((ex, i) => {
                                     const isString = typeof ex === 'string';
                                     const name = isString ? ex.split('|')[0] : ex.name;
                                     const sets = isString ? (ex.split('|')[1]?.split('x')[0] || 0) : ex.sets;
                                     const reps = isString ? (ex.split('|')[1]?.split('x')[1] || 0) : ex.reps;
+                                    
+                                    const isDayEditing = editDayIndex === index;
+                                    const isPendingRemoval = isDayEditing && pendingRemovals.includes(i);
 
                                     return (
                                       <div key={i} style={{ 
-                                        padding: '12px', background: '#f8fafc', borderRadius: '12px',
-                                        border: '1px solid #f1f5f9'
+                                        padding: '10px 14px', 
+                                        background: isPendingRemoval ? '#fef2f2' : '#f8fafc', 
+                                        borderRadius: '12px',
+                                        border: isPendingRemoval ? '1px dashed #ef4444' : '1px solid #e2e8f0',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        position: 'relative',
+                                        minHeight: '48px',
+                                        transition: 'all 0.3s ease'
                                       }}>
-                                        <ExerciseAutocompleteInput 
-                                          value={name} 
-                                          exerciseList={allowedExercises}
-                                          onChange={(newName) => updateFullPlanExercise(dayKey, i, 'name', newName)}
-                                        />
-                                        <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
-                                          <input 
-                                            type="number" 
-                                            value={sets} 
-                                            onChange={e => updateFullPlanExercise(dayKey, i, 'sets', e.target.value)}
-                                            style={{ width: '35px', border: '1px solid #e2e8f0', borderRadius: '4px', textAlign: 'center', fontSize: '11px', fontWeight: '700' }}
-                                          />
-                                          <span style={{ fontSize: '10px', color: '#94a3b8' }}>x</span>
-                                          <input 
-                                            type="number" 
-                                            value={reps} 
-                                            onChange={e => updateFullPlanExercise(dayKey, i, 'reps', e.target.value)}
-                                            style={{ width: '35px', border: '1px solid #e2e8f0', borderRadius: '4px', textAlign: 'center', fontSize: '11px', fontWeight: '700' }}
-                                          />
-                                          <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px' }}>Reps</span>
-                                        </div>
+                                        {isDayEditing && editingExIdx === i ? (
+                                          /* Individual Exercise Edit Mode */
+                                          <>
+                                            <div style={{ flex: 1, position: 'relative' }}>
+                                              {/* Ghost Highlight Layer */}
+                                              <div style={{ 
+                                                position: 'absolute', left: 0, top: 0, 
+                                                fontSize: '13px', fontWeight: '600', color: '#94a3b8', 
+                                                padding: '0', pointerEvents: 'none', 
+                                                fontFamily: "'Inter', sans-serif"
+                                              }}>
+                                                <span style={{ color: 'transparent' }}>{name}</span>
+                                                {getGhostSuggestion(name)}
+                                              </div>
+                                              <input
+                                                value={name}
+                                                onChange={(e) => updateFullPlanExercise(index, i, 'name', e.target.value)}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    const sugg = getGhostSuggestion(name);
+                                                    if (sugg) {
+                                                      updateFullPlanExercise(index, i, 'name', name + sugg);
+                                                      e.preventDefault();
+                                                    }
+                                                  }
+                                                }}
+                                                placeholder="Type exercise..."
+                                                style={{
+                                                  width: '100%', border: 'none', background: 'transparent',
+                                                  fontSize: '13px', fontWeight: '600', color: '#1e293b',
+                                                  outline: 'none', fontFamily: "'Inter', sans-serif",
+                                                  position: 'relative', zIndex: 1
+                                                }}
+                                                autoFocus
+                                              />
+                                              {(!isValidExercise(name) && name.trim() !== '' && getGhostSuggestion(name) === '') && (
+                                                <div style={{ 
+                                                  position: 'absolute', bottom: '-14px', left: 0, 
+                                                  fontSize: '10px', color: '#ef4444', fontWeight: '700',
+                                                  whiteSpace: 'nowrap'
+                                                }}>
+                                                  ⚠️ No such exercise in database.
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                              <input 
+                                                type="number" 
+                                                value={sets} 
+                                                onChange={e => updateFullPlanExercise(index, i, 'sets', e.target.value)}
+                                                style={{ 
+                                                  width: '32px', border: 'none', background: '#e2e8f0', 
+                                                  borderRadius: '5px', textAlign: 'center', fontSize: '12px', 
+                                                  fontWeight: '800', color: '#1e293b', padding: '3px 0'
+                                                }}
+                                              />
+                                              <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>×</span>
+                                              <input 
+                                                type="number" 
+                                                value={reps} 
+                                                onChange={e => updateFullPlanExercise(index, i, 'reps', e.target.value)}
+                                                style={{ 
+                                                  width: '32px', border: 'none', background: '#e2e8f0', 
+                                                  borderRadius: '5px', textAlign: 'center', fontSize: '12px', 
+                                                  fontWeight: '800', color: '#1e293b', padding: '3px 0'
+                                                }}
+                                              />
+                                              <button 
+                                                onClick={() => setEditingExIdx(null)}
+                                                disabled={!isValidExercise(name)}
+                                                style={{ 
+                                                  marginLeft: '8px', cursor: isValidExercise(name) ? 'pointer' : 'not-allowed', 
+                                                  border: 'none', 
+                                                  background: isValidExercise(name) ? '#10b981' : '#94a3b8', 
+                                                  color: '#fff', 
+                                                  borderRadius: '20px', padding: '4px 10px', fontSize: '10px', fontWeight: '800',
+                                                  opacity: isValidExercise(name) ? 1 : 0.6
+                                                }}
+                                              >
+                                                {isValidExercise(name) ? 'Save' : 'Locked'}
+                                              </button>
+                                            </div>
+                                          </>
+                                        ) : (
+                                          /* View Mode OR Selection/Remove Mode */
+                                          <>
+                                            <div style={{ 
+                                              fontSize: '13px', fontWeight: '600', color: '#1e293b', 
+                                              flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                              fontFamily: "'Inter', sans-serif",
+                                              opacity: isPendingRemoval ? 0.2 : (isDayEditing && editingExIdx !== null ? 0.3 : 1)
+                                            }}>
+                                              {name}
+                                            </div>
+
+                                            {isDayEditing ? (
+                                              isPendingRemoval ? (
+                                                /* Soft-Delete Undo/Confirm View */
+                                                <div style={{ 
+                                                  position: 'absolute', left: '50%', top: '50%', 
+                                                  transform: 'translate(-50%, -50%)',
+                                                  display: 'flex', gap: '8px', zIndex: 10
+                                                }}>
+                                                  <button 
+                                                    style={{ 
+                                                      background: '#fee2e2', color: '#ef4444', border: 'none',
+                                                      padding: '4px 12px', borderRadius: '14px', fontSize: '10px',
+                                                      fontWeight: '800', cursor: 'default'
+                                                    }}
+                                                  >
+                                                    🗑️ Slated for Removal
+                                                  </button>
+                                                  <button 
+                                                    onClick={() => setPendingRemovals(prev => prev.filter(idx => idx !== i))}
+                                                    style={{ 
+                                                      background: '#fff', color: '#64748b', border: '1px solid #e2e8f0',
+                                                      padding: '4px 12px', borderRadius: '14px', fontSize: '10px',
+                                                      fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                                                    }}
+                                                  >
+                                                    Cancel (Undo)
+                                                  </button>
+                                                </div>
+                                              ) : (
+                                                /* Selection Mode: Moved Controls to the Right */
+                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                  {editingExIdx === null && (
+                                                    <>
+                                                      <button 
+                                                        onClick={() => {
+                                                          setEditingExIdx(i);
+                                                          updateFullPlanExercise(index, i, 'name', '');
+                                                        }}
+                                                        style={{ 
+                                                          background: '#fff', color: '#2563eb', border: '1px solid #dbeafe',
+                                                          padding: '4px 10px', borderRadius: '10px', fontSize: '10px',
+                                                          fontWeight: '700', cursor: 'pointer'
+                                                        }}
+                                                      >
+                                                        Edit
+                                                      </button>
+                                                      <button 
+                                                        onClick={() => {
+                                                          if (!pendingRemovals.includes(i)) {
+                                                            setPendingRemovals(prev => [...prev, i]);
+                                                          }
+                                                        }}
+                                                        style={{ 
+                                                          background: '#fff', color: '#ef4444', border: '1px solid #fee2e2',
+                                                          padding: '4px 10px', borderRadius: '10px', fontSize: '10px',
+                                                          fontWeight: '700', cursor: 'pointer'
+                                                        }}
+                                                      >
+                                                        Remove
+                                                      </button>
+                                                    </>
+                                                  )}
+                                                  <div style={{ 
+                                                    fontSize: '12px', fontWeight: '800', color: '#64748b',
+                                                    whiteSpace: 'nowrap', fontFamily: "'Inter', sans-serif",
+                                                    opacity: editingExIdx !== null ? 0.3 : 1, marginLeft: '8px'
+                                                  }}>
+                                                    {sets}×{reps}
+                                                  </div>
+                                                </div>
+                                              )
+                                            ) : (
+                                              /* Static Content (View Mode) */
+                                              <div style={{ 
+                                                fontSize: '12px', fontWeight: '800', color: '#64748b',
+                                                whiteSpace: 'nowrap', fontFamily: "'Inter', sans-serif"
+                                              }}>
+                                                {sets}×{reps}
+                                              </div>
+                                            )}
+                                          </>
+                                        )}
                                       </div>
                                     );
                                   })}
@@ -1879,16 +2155,44 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                                     { k: 'dinner', label: 'Dinner', val: dayDiet.dinner },
                                     { k: 'hydration', label: 'Hydration', val: dayDiet.hydration }
                                   ].map(mealItem => mealItem.val ? (
-                                    <div key={mealItem.k} style={{ padding: '8px 12px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #dcfce7' }}>
-                                      <span style={{ fontSize: '10px', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>{mealItem.label}</span>
+                                    <div key={mealItem.k} style={{ 
+                                      padding: '8px 12px', 
+                                      background: '#f0fdf4', 
+                                      borderRadius: '10px', 
+                                      border: '1px solid #dcfce7',
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      gap: '12px'
+                                    }}>
+                                      <span style={{ 
+                                        fontSize: '13px', 
+                                        fontWeight: '600', 
+                                        color: '#166534', 
+                                        opacity: 0.7,
+                                        fontFamily: "'Inter', sans-serif",
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        {mealItem.k.charAt(0).toUpperCase() + mealItem.k.slice(1)}
+                                      </span>
                                       <textarea 
                                         value={mealItem.val}
                                         onChange={e => updateFullPlanDiet(dietDayKey, mealItem.k, e.target.value)}
                                         style={{ 
-                                          width: '100%', border: 'none', background: 'transparent',
-                                          fontSize: '12px', fontWeight: '600', color: '#14532d',
-                                          resize: 'none', minHeight: '40px', outline: 'none', marginTop: '4px'
+                                          width: 'auto', 
+                                          flex: 1,
+                                          border: 'none', 
+                                          background: 'transparent',
+                                          fontSize: '14px', 
+                                          fontWeight: '800', 
+                                          color: '#14532d',
+                                          textAlign: 'right',
+                                          resize: 'none', 
+                                          outline: 'none',
+                                          fontFamily: "'Inter', sans-serif",
+                                          lineHeight: '1.2'
                                         }}
+                                        rows={1}
                                       />
                                     </div>
                                   ) : null)}
@@ -1920,21 +2224,27 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                  {error && (
                    <p style={{ color: '#ef4444', fontSize: '12px', fontWeight: '700', margin: 0 }}>{error}</p>
                  )}
+                 {editDayIndex !== null && (
+                   <p style={{ color: '#f59e0b', fontSize: '11px', fontWeight: '700', margin: 0, opacity: 0.9 }}>
+                     ⚠️ Please click "Done" in the schedule before approving.
+                   </p>
+                 )}
                  {!generating && (
                    <button 
                      onClick={handleEnroll}
-                     disabled={submitting}
+                     disabled={submitting || editDayIndex !== null || !isPlanValid()}
                      style={{
-                       background: submitting ? '#9ca3af' : '#10b981', 
+                       background: (submitting || editDayIndex !== null || !isPlanValid()) ? '#9ca3af' : '#10b981', 
                        color: '#fff', border: 'none',
                        padding: '14px 28px', borderRadius: '14px', fontSize: '15px',
-                       fontWeight: '800', cursor: submitting ? 'not-allowed' : 'pointer', 
+                       fontWeight: '800', cursor: (submitting || editDayIndex !== null || !isPlanValid()) ? 'not-allowed' : 'pointer', 
                        transition: 'all 0.2s',
-                       boxShadow: submitting ? 'none' : '0 10px 15px -3px rgba(16, 185, 129, 0.3)',
-                       display: 'flex', alignItems: 'center', gap: '8px'
+                       boxShadow: (submitting || editDayIndex !== null || !isPlanValid()) ? 'none' : '0 10px 15px -3px rgba(16, 185, 129, 0.3)',
+                       display: 'flex', alignItems: 'center', gap: '8px',
+                       opacity: (submitting || editDayIndex !== null || !isPlanValid()) ? 0.7 : 1
                      }}
-                     onMouseEnter={e => { if(!submitting) e.target.style.transform = 'translateY(-2px)'; }}
-                     onMouseLeave={e => { if(!submitting) e.target.style.transform = 'translateY(0)'; }}
+                     onMouseEnter={e => { if(!submitting && editDayIndex === null && isPlanValid()) e.target.style.transform = 'translateY(-2px)'; }}
+                     onMouseLeave={e => { if(!submitting && editDayIndex === null && isPlanValid()) e.target.style.transform = 'translateY(0)'; }}
                    >
                      {submitting ? (
                         <>

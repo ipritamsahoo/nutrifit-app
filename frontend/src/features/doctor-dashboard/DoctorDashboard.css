@@ -3,9 +3,9 @@
    ══════════════════════════════════════════════════════ */
 
 :root {
-  --clinical-bg: #f8fafc;
-  --clinical-card: #ffffff;
-  --clinical-blue: #2563eb;
+  --clinical-bg: var(--nf-bg);
+  --clinical-card: var(--nf-surface);
+  --clinical-blue: var(--nf-primary);
   --clinical-blue-soft: #eff6ff;
   --clinical-blue-border: #dbeafe;
   --clinical-emerald: #059669;
@@ -15,10 +15,10 @@
   --clinical-slate-700: #334155;
   --clinical-slate-500: #64748b;
   --clinical-slate-400: #94a3b8;
-  --clinical-slate-200: #e2e8f0;
+  --clinical-slate-200: var(--nf-border);
   --clinical-slate-100: #f1f5f9;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-md: var(--shadow-clinical);
 }
 
 /* ── Root Container ──────────────────────────────────── */
@@ -171,9 +171,9 @@
 }
 
 .col-a-search-input:focus {
-  background: #11131A;
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2), inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  background: #ffffff;
+  border-color: var(--clinical-blue);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1), inset 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .col-a-filter-icon {
@@ -258,7 +258,7 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid #15171E;
+  border: 2px solid white;
 }
 
 .p-card-status-dot.online {

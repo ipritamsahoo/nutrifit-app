@@ -29,16 +29,19 @@ function GlobalLoading() {
   return (
     <div style={{
       height: '100vh', width: '100%', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', background: '#0a0a0a', color: '#fff',
-      fontFamily: 'system-ui, sans-serif'
+      alignItems: 'center', justifyContent: 'center', background: 'var(--nf-bg)', color: 'var(--nf-text-main)',
+      fontFamily: "'Inter', system-ui, sans-serif"
     }}>
       <div style={{ 
-        width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)',
-        borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite',
-        marginBottom: '16px'
+        width: '44px', height: '44px', border: '3px solid var(--nf-border)',
+        borderTopColor: 'var(--nf-primary)', borderRadius: '50%', animation: 'spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+        marginBottom: '20px', boxShadow: '0 0 15px var(--nf-glow)'
       }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <p style={{ opacity: 0.6, fontSize: '14px', letterSpacing: '0.05em' }}>NUTRIFIT INITIALIZING...</p>
+      <p style={{ 
+        fontWeight: 800, fontSize: '13px', letterSpacing: '0.15em', 
+        color: 'var(--nf-text-muted)', textTransform: 'uppercase' 
+      }}>NutriFit Initializing</p>
     </div>
   );
 }
@@ -83,19 +86,24 @@ function HomeRedirect() {
       return (
         <div style={{ 
           height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-          background: '#0a0a0a', color: '#ef4444', textAlign: 'center', padding: '20px' 
+          background: 'var(--nf-bg)', color: '#ef4444', textAlign: 'center', padding: '20px' 
         }}>
-          <div>
-            <h2 style={{ marginBottom: '12px' }}>Profile Initialization Error</h2>
-            <p style={{ color: '#fff', opacity: 0.7 }}>
+          <div style={{ 
+            background: 'var(--nf-surface)', padding: '40px', borderRadius: '24px', 
+            border: '1px solid var(--nf-border)', boxShadow: 'var(--shadow-clinical)', maxWidth: '440px' 
+          }}>
+            <h2 style={{ marginBottom: '12px', color: 'var(--nf-text-main)', fontWeight: 800 }}>Profile Initialization Error</h2>
+            <p style={{ color: 'var(--nf-text-muted)', opacity: 0.9, lineHeight: 1.6 }}>
               We found your account but couldn't verify your clinical role.<br/>
               Please contact your administrator or try logging out.
             </p>
             <button 
               onClick={() => window.location.href = '/login'} 
               style={{ 
-                marginTop: '24px', padding: '10px 20px', borderRadius: '6px', 
-                background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer' 
+                marginTop: '24px', padding: '14px 28px', borderRadius: '14px', 
+                background: 'var(--nf-gradient)', color: '#fff', border: 'none', cursor: 'pointer',
+                fontWeight: 800, boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
+                transition: 'all 0.2s'
               }}
             >
               Back to Login

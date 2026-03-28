@@ -46,7 +46,7 @@ client = OpenAI(
   timeout=60.0,
   default_headers={
       "HTTP-Referer": "http://localhost:5173",
-      "X-Title": "HonFit Virtual Coach",
+      "X-Title": "NutriFit Virtual Coach",
   }
 )
 
@@ -57,7 +57,7 @@ client_plan = OpenAI(
   timeout=90.0,
   default_headers={
       "HTTP-Referer": "http://localhost:5173",
-      "X-Title": "HonFit Plan Generator",
+      "X-Title": "NutriFit Plan Generator",
   }
 )
 
@@ -296,7 +296,7 @@ def _start_plan_generation_background(session_id: str, profile: dict) -> None:
 
 def get_chat_system_prompt() -> str:
     """Lightweight prompt for the conversational stage."""
-    return """You are HonFit Virtual Coach — a friendly, professional AI fitness and nutrition coach.
+    return """You are NutriFit Virtual Coach — a friendly, professional AI fitness and nutrition coach.
 Your job is to have a natural conversation with the user to understand their needs. You MUST progress through the 3 phases strictly.
 
 ## PHASE 1: CORE QUESTIONS

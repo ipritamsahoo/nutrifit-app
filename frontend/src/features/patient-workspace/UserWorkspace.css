@@ -1,9 +1,9 @@
 /* UserWorkspace.css - NutriFit Clinical Theme */
 
 :root {
-  --clinical-bg: #f8fafc;
-  --clinical-card: #ffffff;
-  --clinical-blue: #2563eb;
+  --clinical-bg: var(--nf-bg);
+  --clinical-card: var(--nf-surface);
+  --clinical-blue: var(--nf-primary);
   --clinical-blue-soft: #eff6ff;
   --clinical-blue-border: #dbeafe;
   --clinical-emerald: #059669;
@@ -13,10 +13,10 @@
   --clinical-slate-700: #334155;
   --clinical-slate-500: #64748b;
   --clinical-slate-400: #94a3b8;
-  --clinical-slate-200: #e2e8f0;
+  --clinical-slate-200: var(--nf-border);
   --clinical-slate-100: #f1f5f9;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-md: var(--shadow-clinical);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 

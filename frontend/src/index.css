@@ -1,4 +1,28 @@
-/* ===== Global Reset & Dark Theme ===== */
+/* ===== Unified Clinical Blue Design Tokens ===== */
+:root {
+  /* NutriFit Vibrant Blue Palette (High Energy) */
+  --nf-primary: #2563eb;         /* Blue-600 */
+  --nf-secondary: #6366f1;       /* Indigo-500 */
+  --nf-accent: #059669;          /* Emerald-600 */
+  --nf-gradient: linear-gradient(135deg, var(--nf-primary), var(--nf-secondary));
+  --nf-glow: rgba(37, 99, 235, 0.2);
+  
+  /* Clinical Neutral Scale */
+  --nf-bg: #f8fafc;
+  --nf-surface: #ffffff;
+  --nf-text-main: #0f172a;
+  --nf-text-muted: #64748b;
+  --nf-border: #e2e8f0;
+  
+  /* Premium Shadow & Focus */
+  --shadow-clinical: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --focus-ring: 0 0 0 4px var(--nf-glow);
+  
+  /* Clean Transition */
+  --trans-clinical: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== Global Reset & Clinical Light Theme ===== */
 *,
 *::before,
 *::after {
@@ -7,7 +31,9 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   width: 100%;
   min-height: 100%;
 }
@@ -15,8 +41,26 @@ html, body, #root {
 body {
   overflow-x: hidden;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #0a0a0a;
-  color: #e0e0e0;
+  background: #f8fafc;
+  color: #0f172a;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Base scrollbar for light theme surface */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

@@ -146,7 +146,7 @@ export default function VideoModal({ exerciseName, videos, muscleGroup, difficul
                   onCanPlay={() => setFrontLoaded(true)}
                   onError={() => { console.error("Front video fail"); setFrontError(true); }}
                 />
-                <div className="watermark-cover">HonFit Pro</div>
+                <div className="watermark-cover">NutriFit Pro</div>
               </div>
               
               {/* Side Video */}
