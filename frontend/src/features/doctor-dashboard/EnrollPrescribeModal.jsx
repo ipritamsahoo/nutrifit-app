@@ -13,9 +13,10 @@
  *   - onClose   : () => void
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
+import exerciseData from '../../data/exercises.json';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -25,134 +26,215 @@ const API_URL = 'http://localhost:8000';
    ExerciseAutocompleteInput Component
    Strict autocomplete for exercise names.
    ────────────────────────────────────────────────────────────────────────── */
-const ExerciseAutocompleteInput = ({ value, onChange, exerciseList = [] }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [inputValue, setInputValue] = useState(value);
+const ExerciseAutocompleteInput = ({ value, onChange }) => {
+  const [inputValue, setInputValue] = useState(value || '');
   const [suggestions, setSuggestions] = useState([]);
+  const [error, setError] = useState('');
+  const [isLocked, setIsLocked] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const wrapperRef = useRef(null);
+
+  function debounce(fn, delay) {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn(...args), delay);
+    };
+  }
+
+  function searchExercises(data, query) {
+    const q = query.toLowerCase().trim();
+    if (!q) return [];
+    const results = data.map(ex => {
+      let score = 0;
+      const lowerName = ex.name.toLowerCase();
+      const lowerPrimary = ex.primary.toLowerCase();
+      
+      // Exact matches get massive boosts
+      if (lowerName === q) score += 100;
+      if (lowerPrimary === q) score += 80;
+      
+      // Starts with matches
+      if (lowerName.startsWith(q)) score += 50;
+      if (lowerPrimary.startsWith(q)) score += 40;
+
+      // Substring matches
+      if (ex.primary.includes(q)) score += 20;
+      if (ex.name.toLowerCase().includes(q)) score += 30; // Name often has equipment/variant, we want to see it
+      
+      // Aliases and Tokens
+      if (ex.aliases.some(a => a.toLowerCase().includes(q))) score += 10;
+      if (ex.tokens.some(t => t.toLowerCase().includes(q))) score += 5;
+      
+      return { ...ex, score };
+    })
+    .filter(ex => ex.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+    // DEDUPLICATE BY NAME: Ensure each name only appears once (Aggressive Normalization)
+    const seenNames = new Set();
+    return results.filter(ex => {
+      // Normalize to "push up" from "Push-Up ", "push up", "PUSHUP", etc.
+      const normalizedName = ex.name.toLowerCase()
+        .replace(/-/g, ' ')      // Hyphen to space
+        .replace(/\s+/g, ' ')     // Double spaces to single
+        .trim();                 // Clean edges
+        
+      if (seenNames.has(normalizedName)) return false;
+      seenNames.add(normalizedName);
+      return true;
+    });
+  }
+
+  const debouncedSearch = useCallback(debounce((query) => {
+    if (query.length > 1) {
+      const results = searchExercises(exerciseData, query);
+      if (results.length > 0) {
+        setSuggestions(results.slice(0, 15)); // Show more variants as requested
+        setError('');
+      } else {
+        setSuggestions([]);
+        setError("No exercise found");
+      }
+    } else {
+      setSuggestions([]);
+      setError('');
+    }
+  }, 200), []);
+
+  useEffect(() => {
+    if (!isLocked) {
+      debouncedSearch(inputValue);
+    }
+  }, [inputValue, isLocked, debouncedSearch]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        closeDropdown();
+        setSuggestions([]);
+        setError('');
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const closeDropdown = () => {
+  const handleSelect = (exercise) => {
+    onChange(exercise.name);
+    setInputValue(exercise.name);
     setSuggestions([]);
-    setHighlightedIndex(-1);
-    setIsEditing(false);
+    setError('');
+    setIsLocked(true);
   };
-
+  
   const handleInputChange = (e) => {
     const val = e.target.value;
     setInputValue(val);
-    
-    if (val.trim().length > 0) {
-      const filtered = exerciseList
-        .filter(item => item.toLowerCase().includes(val.toLowerCase()))
-        .slice(0, 5);
-      setSuggestions(filtered);
-    } else {
-      setSuggestions([]);
-    }
-    setHighlightedIndex(-1);
-  };
-
-  const handleSelect = (item) => {
-    onChange(item);
-    setInputValue(item);
-    closeDropdown();
+    if(isLocked) setIsLocked(false);
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlightedIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : prev));
+      setHighlightedIndex(prev => Math.min(prev + 1, suggestions.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setHighlightedIndex(prev => (prev > 0 ? prev - 1 : prev));
+      setHighlightedIndex(prev => Math.max(prev - 1, 0));
     } else if (e.key === 'Enter') {
-      if (highlightedIndex >= 0) {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
         handleSelect(suggestions[highlightedIndex]);
-      } else if (exerciseList.some(ex => ex.toLowerCase() === inputValue.toLowerCase())) {
-        const matched = exerciseList.find(ex => ex.toLowerCase() === inputValue.toLowerCase());
-        handleSelect(matched);
+      } else if (suggestions.length > 0) {
+        handleSelect(suggestions[0]);
       }
     } else if (e.key === 'Escape') {
-      setInputValue(value);
-      closeDropdown();
+      setSuggestions([]);
+      setError('');
     }
   };
 
-  // FORCED READ-ONLY: User requested to disable editing for now.
-  return (
-    <div 
-      style={{ 
-        fontSize: '14px', fontWeight: '700', color: '#1e293b', 
-        padding: '4px 8px', borderRadius: '6px', flex: 1
-      }}
-    >
-      {value || 'Rest Day'}
-    </div>
-  );
+  const ghostSuggestion = suggestions.length > 0 && inputValue && suggestions[0].name.toLowerCase().startsWith(inputValue.toLowerCase())
+    ? suggestions[0].name.substring(inputValue.length)
+    : "";
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative', flex: 1 }}>
-      <input
-        autoFocus
-        type="text"
-        value={inputValue}
-        onChange={handleInputChange}
-        onKeyDown={handleKeyDown}
-        placeholder="Type exercise..."
-        style={{
-          width: '100%', padding: '6px 10px', fontSize: '14px', fontWeight: '700',
-          border: '2px solid #3b82f6', borderRadius: '8px', outline: 'none',
-          background: '#fff', boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)'
-        }}
-      />
-      {suggestions.length > 0 && (
+      <div style={{ position: 'relative' }}>
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={() => { if(isLocked) setIsLocked(false); }}
+          placeholder="Type exercise..."
+          style={{
+            width: '100%', padding: '6px 10px', fontSize: '14px', fontWeight: '700',
+            border: isLocked ? '2px solid #16a34a' : (error ? '2px solid #dc2626' : '2px solid #3b82f6'),
+            borderRadius: '8px', outline: 'none',
+            background: '#fff', boxShadow: '0 0 0 3px ' + (isLocked ? 'rgba(22, 163, 74, 0.1)' : (error ? 'rgba(220, 38, 38, 0.1)' : 'rgba(59, 130, 246, 0.1)')),
+            position: 'relative',
+            zIndex: 2,
+          }}
+        />
+        {!isLocked && ghostSuggestion && (
+          <div style={{
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            padding: '6px 10px',
+            fontSize: '14px',
+            fontWeight: '700',
+            color: '#cbd5e1',
+            pointerEvents: 'none',
+            zIndex: 1,
+            whiteSpace: 'pre',
+          }}>
+            <span style={{visibility: 'hidden'}}>{inputValue}</span>{ghostSuggestion}
+          </div>
+        )}
+      </div>
+      {suggestions.length > 0 && !error && !isLocked && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000,
+          position: 'absolute', top: '100%', left: 0, zIndex: 1000,
           background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px',
           marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-          overflow: 'hidden', padding: '4px'
+          overflow: 'hidden', padding: '4px',
+          minWidth: '100%', width: 'max-content', maxWidth: '300px'
         }}>
-          {suggestions.map((item, idx) => {
-            const isMatch = item.toLowerCase().indexOf(inputValue.toLowerCase());
-            return (
-              <div
-                key={item}
-                onClick={() => handleSelect(item)}
-                onMouseEnter={() => setHighlightedIndex(idx)}
-                style={{
-                  padding: '10px 12px', fontSize: '12px', cursor: 'pointer',
-                  borderRadius: '6px',
-                  background: highlightedIndex === idx ? '#eff6ff' : 'transparent',
-                  color: highlightedIndex === idx ? '#2563eb' : '#334155',
-                  fontWeight: highlightedIndex === idx ? '700' : '500'
-                }}
-              >
-                {isMatch !== -1 ? (
-                  <>
-                    {item.substring(0, isMatch)}
-                    <span style={{ color: '#2563eb', fontWeight: '800', borderBottom: '2px solid #3b82f6' }}>{item.substring(isMatch, isMatch + inputValue.length)}</span>
-                    {item.substring(isMatch + inputValue.length)}
-                  </>
-                ) : item}
-              </div>
-            );
-          })}
+          {suggestions.map((item, idx) => (
+            <div
+              key={item.id}
+              onClick={() => handleSelect(item)}
+              onMouseEnter={() => setHighlightedIndex(idx)}
+              style={{
+                padding: '10px 12px', fontSize: '12px', cursor: 'pointer',
+                borderRadius: '6px',
+                background: highlightedIndex === idx ? '#eff6ff' : 'transparent',
+                color: highlightedIndex === idx ? '#2563eb' : '#334155',
+                fontWeight: highlightedIndex === idx ? '700' : '500'
+              }}
+            >
+              {item.name}
+            </div>
+          ))}
+        </div>
+      )}
+      {error && !isLocked && (
+        <div style={{
+          marginTop: '4px',
+          padding: '4px 8px',
+          fontSize: '12px',
+          color: '#dc2626',
+          background: 'rgba(220, 38, 38, 0.05)',
+          borderRadius: '6px',
+        }}>
+          {error === "No exercise found" ? "No exercise found" : "Try 'push up' or 'curl'"}
         </div>
       )}
     </div>
   );
 };
+
 
 const MultiSelectDropdown = ({ options, selected, onChange, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -484,20 +566,10 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
 
   /* ── AI Generate ───────────────────────────────────── */
   const isValidExercise = (name) => {
-    if (!name || name.trim() === '') return false;
-    return allowedExercises.some(ex => ex.toLowerCase() === name.toLowerCase());
+    return name && name.trim() !== '';
   };
 
-  const getGhostSuggestion = (input) => {
-    if (!input || input.trim() === '') return '';
-    const match = allowedExercises.find(ex => 
-      ex.toLowerCase().startsWith(input.toLowerCase())
-    );
-    if (match && match.toLowerCase() !== input.toLowerCase()) {
-      return match.slice(input.length);
-    }
-    return '';
-  };
+
 
   const isPlanValid = () => {
     if (!fullGeneratedPlan || !fullGeneratedPlan.sched || !fullGeneratedPlan.tpl) return true;
@@ -1400,7 +1472,6 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                               <div className="rx-exercise-row" key={ex.id} style={{ marginBottom: '10px', background: '#fff', padding: '8px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                                 <ExerciseAutocompleteInput 
                                   value={ex.name} 
-                                  exerciseList={allowedExercises}
                                   onChange={newName => updateExercise(ex.id, 'name', newName)} 
                                 />
                                 <div className="rx-exercise-nums" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1668,7 +1739,6 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                                   <div className="rx-exercise-row" key={ex.id} style={{ marginBottom: '10px', background: '#fff', padding: '8px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px' }}>
                                     <ExerciseAutocompleteInput 
                                       value={ex.name} 
-                                      exerciseList={allowedExercises}
                                       onChange={newName => updateExercise(ex.id, 'name', newName)} 
                                     />
                                     <div className="rx-exercise-nums" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1904,11 +1974,18 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                             {!isRest && !generating && (
                               <button
                                 onClick={() => toggleEdit(index)}
+                                disabled={editDayIndex === index && editingExIdx !== null}
                                 style={{
                                   fontSize: '11px', fontWeight: '700', padding: '4px 10px',
-                                  borderRadius: '8px', background: '#f1f5f9', border: '1px solid #e2e8f0',
-                                  cursor: 'pointer', transition: 'all 0.2s', color: '#475569',
-                                  fontFamily: "'Inter', sans-serif"
+                                  borderRadius: '8px', 
+                                  background: (editDayIndex === index && editingExIdx !== null) ? '#e2e8f0' : '#f1f5f9', 
+                                  border: '1px solid #e2e8f0',
+                                  cursor: (editDayIndex === index && editingExIdx !== null) ? 'not-allowed' : 'pointer', 
+                                  transition: 'all 0.2s', 
+                                  color: (editDayIndex === index && editingExIdx !== null) ? '#94a3b8' : '#475569',
+                                  fontFamily: "'Inter', sans-serif",
+                                  opacity: (editDayIndex === index && editingExIdx !== null) ? 0.6 : 1,
+                                  pointerEvents: (editDayIndex === index && editingExIdx !== null) ? 'none' : 'auto'
                                 }}
                               >
                                 {editDayIndex === index ? "Done" : "Edit"}
@@ -1964,48 +2041,10 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                                         {isDayEditing && editingExIdx === i ? (
                                           /* Individual Exercise Edit Mode */
                                           <>
-                                            <div style={{ flex: 1, position: 'relative' }}>
-                                              {/* Ghost Highlight Layer */}
-                                              <div style={{ 
-                                                position: 'absolute', left: 0, top: 0, 
-                                                fontSize: '13px', fontWeight: '600', color: '#94a3b8', 
-                                                padding: '0', pointerEvents: 'none', 
-                                                fontFamily: "'Inter', sans-serif"
-                                              }}>
-                                                <span style={{ color: 'transparent' }}>{name}</span>
-                                                {getGhostSuggestion(name)}
-                                              </div>
-                                              <input
+                                            <ExerciseAutocompleteInput 
                                                 value={name}
-                                                onChange={(e) => updateFullPlanExercise(index, i, 'name', e.target.value)}
-                                                onKeyDown={(e) => {
-                                                  if (e.key === 'Enter') {
-                                                    const sugg = getGhostSuggestion(name);
-                                                    if (sugg) {
-                                                      updateFullPlanExercise(index, i, 'name', name + sugg);
-                                                      e.preventDefault();
-                                                    }
-                                                  }
-                                                }}
-                                                placeholder="Type exercise..."
-                                                style={{
-                                                  width: '100%', border: 'none', background: 'transparent',
-                                                  fontSize: '13px', fontWeight: '600', color: '#1e293b',
-                                                  outline: 'none', fontFamily: "'Inter', sans-serif",
-                                                  position: 'relative', zIndex: 1
-                                                }}
-                                                autoFocus
+                                                onChange={newName => updateFullPlanExercise(index, i, 'name', newName)} 
                                               />
-                                              {(!isValidExercise(name) && name.trim() !== '' && getGhostSuggestion(name) === '') && (
-                                                <div style={{ 
-                                                  position: 'absolute', bottom: '-14px', left: 0, 
-                                                  fontSize: '10px', color: '#ef4444', fontWeight: '700',
-                                                  whiteSpace: 'nowrap'
-                                                }}>
-                                                  ⚠️ No such exercise in database.
-                                                </div>
-                                              )}
-                                            </div>
                                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                               <input 
                                                 type="number" 
@@ -2040,7 +2079,7 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                                                   opacity: isValidExercise(name) ? 1 : 0.6
                                                 }}
                                               >
-                                                {isValidExercise(name) ? 'Save' : 'Locked'}
+                                                Save
                                               </button>
                                             </div>
                                           </>
@@ -2232,19 +2271,19 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
                  {!generating && (
                    <button 
                      onClick={handleEnroll}
-                     disabled={submitting || editDayIndex !== null || !isPlanValid()}
+                     disabled={submitting}
                      style={{
-                       background: (submitting || editDayIndex !== null || !isPlanValid()) ? '#9ca3af' : '#10b981', 
+                       background: submitting ? '#9ca3af' : '#10b981', 
                        color: '#fff', border: 'none',
                        padding: '14px 28px', borderRadius: '14px', fontSize: '15px',
-                       fontWeight: '800', cursor: (submitting || editDayIndex !== null || !isPlanValid()) ? 'not-allowed' : 'pointer', 
+                       fontWeight: '800', cursor: submitting ? 'not-allowed' : 'pointer', 
                        transition: 'all 0.2s',
-                       boxShadow: (submitting || editDayIndex !== null || !isPlanValid()) ? 'none' : '0 10px 15px -3px rgba(16, 185, 129, 0.3)',
+                       boxShadow: submitting ? 'none' : '0 10px 15px -3px rgba(16, 185, 129, 0.3)',
                        display: 'flex', alignItems: 'center', gap: '8px',
-                       opacity: (submitting || editDayIndex !== null || !isPlanValid()) ? 0.7 : 1
+                       opacity: submitting ? 0.7 : 1
                      }}
-                     onMouseEnter={e => { if(!submitting && editDayIndex === null && isPlanValid()) e.target.style.transform = 'translateY(-2px)'; }}
-                     onMouseLeave={e => { if(!submitting && editDayIndex === null && isPlanValid()) e.target.style.transform = 'translateY(0)'; }}
+                     onMouseEnter={e => { if(!submitting) e.target.style.transform = 'translateY(-2px)'; }}
+                     onMouseLeave={e => { if(!submitting) e.target.style.transform = 'translateY(0)'; }}
                    >
                      {submitting ? (
                         <>
