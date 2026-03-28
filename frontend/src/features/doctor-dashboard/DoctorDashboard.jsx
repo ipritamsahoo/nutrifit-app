@@ -21,7 +21,6 @@ import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'f
 import { db } from '../../firebase/config';
 import './DoctorDashboard.css';
 import EnrollPrescribeModal from './EnrollPrescribeModal';
-import DoctorChatbotWidget from './DoctorChatbotWidget';
 
 const API_URL = 'http://localhost:8000';
 
@@ -375,7 +374,13 @@ export default function DoctorDashboard() {
                         // V1 Schema / Legacy Fallback
                         const dX = dData[`day_${day}`];
                         if (Array.isArray(dX)) {
-                          dietMeals = dX;
+                          dX.forEach(m => {
+                            if (typeof m === 'string') {
+                              dietMeals.push(m);
+                            } else if (m && (m.name || m.meal)) {
+                              dietMeals.push(`${m.meal_type || 'meal'}:${m.name || m.meal}|${m.cal || 0}`);
+                            }
+                          });
                         } else if (typeof dX === 'object') {
                           Object.entries(dX).forEach(([mType, val]) => {
                             if (val) {
@@ -421,8 +426,14 @@ export default function DoctorDashboard() {
                                   );
                                 })}
                               </ul>
-                            ) : <p className="pdc-empty">No diet tracked</p>}
+                            ) : Object.keys(patientPlan.diet_json || {}).length === 0 ? (
+                              <p className="pdc-empty" style={{ color: '#94a3b8' }}>Not Prescribed</p>
+                            ) : (
+                              <p className="pdc-empty">No diet tracked</p>
+                            )}
                           </div>
+
+                          <div className="pdc-divider" />
 
                           <div className="pdc-section workout">
                             <h4 className="pdc-section-title"><Activity size={12}/> Workout</h4>
@@ -441,9 +452,13 @@ export default function DoctorDashboard() {
                                   );
                                 })}
                               </ul>
+                            ) : Object.keys(patientPlan.workout_json || {}).length === 0 ? (
+                              <p className="pdc-empty" style={{ color: '#94a3b8' }}>Not Prescribed</p>
                             ) : workoutChar === 'M' ? (
                               <p className="pdc-empty">Mobility / Rest</p>
-                            ) : <p className="pdc-empty">Rest Day</p>}
+                            ) : (
+                              <p className="pdc-empty">Rest Day</p>
+                            )}
                           </div>
 
                         </div>
@@ -463,8 +478,6 @@ export default function DoctorDashboard() {
         </div>
       )}
 
-      {/* ═══ FLOATING AI CHATBOT ═══ */}
-      <DoctorChatbotWidget />
     </div>
   );
 }
