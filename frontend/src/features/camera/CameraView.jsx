@@ -17,8 +17,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import { createPoseDetector } from './utils/poseUtils';
 import { clearCanvas, drawKeypoints, drawConnections } from './utils/drawUtils';
-import { calculateAngle, checkGenericRep, isUserFullyVisible } from './utils/angleUtils';
-import { ALL_EXERCISE_NAMES, getExerciseConfig } from './utils/exerciseConfigs';
+import { calculateAngle, checkGenericRep, isUserFullyVisible, validateFormRules } from './utils/angleUtils';
+import { ALL_EXERCISE_NAMES, getExerciseConfig, normalizeExerciseName } from './utils/exerciseConfigs';
 import { createLandmarkFilters, filterLandmarks, predictLandmarks, lerpLandmarks } from './utils/cvKalmanFilter';
 import { speak, stopSpeaking } from './utils/speechUtils';
 import { useAuth } from '../../contexts/AuthContext';
@@ -42,7 +42,16 @@ const EXERCISES = ALL_EXERCISE_NAMES.map(name => {
   return { id: name, name: name, icon };
 }).sort((a, b) => a.name.localeCompare(b.name));
 
-function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose, onRepUpdate }) {
+export default function CameraView({ 
+  exerciseName: exerciseNameProp, 
+  embedded = false, 
+  onClose, 
+  onRepUpdate,
+  onComplete,
+  targetSets: targetSetsProp,
+  targetReps: targetRepsProp,
+  workoutDay: workoutDayProp
+}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
@@ -69,6 +78,13 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
 
   // Form scoring refs
   const successRepsRef = useRef(0);  // Reps where user hit target depth
+  const currentSetRef = useRef(1);
+  const setLogsRef = useRef([]);
+  const [repSound] = useState(() => new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'));
+  const isRestingRef = useRef(true);
+  const totalGoodDurationRef = useRef(0);
+  const totalAllRepDurationRef = useRef(0);
+  const lastFrameTimeRef = useRef(performance.now());
 
   /* ── State ──────────────────────────────────────────────────── */
   const [poseDetected, setPoseDetected] = useState(false);
@@ -78,21 +94,31 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
 
   const [videoDims, setVideoDims] = useState({ width: REQUESTED_WIDTH, height: REQUESTED_HEIGHT });
   const [exerciseType, setExerciseType] = useState(() => {
-    // If embedded with specific exercise, use that
-    if (exerciseNameProp && EXERCISES.some(e => e.id === exerciseNameProp)) return exerciseNameProp;
-    const urlEx = searchParams.get('exercise');
-    if (urlEx) {
-      // Exact match (full key like "Biceps - Dumbbell Curl")
-      const exact = EXERCISES.find(e => e.id === urlEx);
-      if (exact) return exact.id;
-      // Suffix match (short name like "Dumbbell Curl" → find "Biceps - Dumbbell Curl")
-      const suffix = EXERCISES.find(e => e.id.endsWith(' - ' + urlEx));
-      if (suffix) return suffix.id;
+    // 1. If embedded with specific name, normalize it
+    if (exerciseNameProp) {
+      const norm = normalizeExerciseName(exerciseNameProp);
+      if (norm) return norm;
     }
-    return EXERCISES.find(e => e.name.includes('Barbell Forward Lunge'))?.id || EXERCISES[0].id;
+    
+    // 2. Check URL search param and normalize it
+    const urlExRaw = searchParams.get('exercise');
+    if (urlExRaw) {
+      const norm = normalizeExerciseName(urlExRaw);
+      if (norm) return norm;
+    }
+
+    return ALL_EXERCISE_NAMES[0]; // Fallback to first available
   });
   const [repsDisplay, setRepsDisplay] = useState(0);
+  const [currentSet, setCurrentSet] = useState(1);
+  const [isResting, setIsResting] = useState(true);
+  const [calories, setCalories] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  // Targets from Props or URL
+  const targetSets = targetSetsProp || parseInt(searchParams.get('sets')) || 3;
+  const targetReps = targetRepsProp || parseInt(searchParams.get('reps')) || 10;
+  const weightKg = 70; // Fallback
 
   // Enhanced feedback state
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -104,6 +130,7 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
   const firstResultRef = useRef(false);
   const lastFeedbackRef = useRef('');
   const isCalibratedRef = useRef(false);
+  const isFormViolatedRef = useRef(false);
 
   /* ── MediaPipe onResults callback ──────────────────────────── */
   const handleResults = useCallback((results) => {
@@ -305,66 +332,138 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
             }
           }
 
-          // Rep tracking uses PRIMARY angle (index 0)
+          // Rep tracking uses MULTI-JOINT validation (Shoulder + Elbow)
           if (computedAngles.length > 0) {
-            const primary = computedAngles[0];
-            currentAngleRef.current = primary.value;
+            // ── EXCLUSIVE GATE: Only track reps if calibrated ──
+            if (isCalibratedRef.current) {
+              // ── ADVANCED FORM VALIDATION ──
+              const coreCorrection = (!isRestingRef.current && config.formRules) 
+                ? validateFormRules(landmarks, config.formRules) 
+                : null;
 
-            // Build config for checkGenericRep (primary angle only)
-            const repConfig = {
-              upThreshold: primary.upAngle,
-              downThreshold: primary.downAngle,
-              startPosition: config.startPosition,
-            };
+              const res = checkGenericRep(
+                computedAngles, 
+                workoutStateRef.current, 
+                config.startPosition, 
+                { 
+                  requireFullForm: config.requireFullForm,
+                  fullFormErrorMessage: config.fullFormErrorMessage 
+                }
+              );
 
-            const res = checkGenericRep(primary.value, workoutStateRef.current, repConfig);
-            workoutStateRef.current = res.newState;
+              // Update the state machine
+              const oldState = workoutStateRef.current;
+              workoutStateRef.current = res.newState;
+              currentAngleRef.current = computedAngles[0].value;
 
-            if (res.repCompleted) {
-              repsRef.current += 1;
-              setRepsDisplay(repsRef.current);
-              if (onRepUpdate) onRepUpdate(repsRef.current);
-            }
-
-            if (res.isCorrect && res.repCompleted) {
-              successRepsRef.current += 1;
-            }
-
-            // Form status overrides unless uncalibrated
-            if (currentStatus !== 'uncalibrated') {
-              if (res.isCorrect) {
-                currentStatus = 'success';
-              } else if (res.progress > 15) {
-                currentStatus = 'inProgress';
+              // If form is currently wrong, mark the CURRENT rep attempt as violated
+              if (coreCorrection) {
+                isFormViolatedRef.current = true;
               }
-            }
 
-            if (res.feedback && res.feedback !== lastFeedbackRef.current) {
-              lastFeedbackRef.current = res.feedback;
-              setFeedbackMsg(res.feedback);
-              setFormStatus(currentStatus);
-              speak(res.feedback.replace(/[✅🔥]/g, ''), isMuted);
-            }
+              // Only track if a set is officially in progress AND no violations occurred during this movement
+              if (!isRestingRef.current && res.repCompleted) {
+                if (!isFormViolatedRef.current) {
+                  repsRef.current += 1;
+                  setRepsDisplay(repsRef.current);
+                  
+                  // Audio feedback for rep completion
+                  if (!isMuted) {
+                    repSound.currentTime = 0;
+                    repSound.play().catch(e => console.warn('Audio play failed:', e));
+                  }
+                  
+                  if (res.isCorrect) {
+                    successRepsRef.current += 1;
+                    const met = config.metValue || 3.5;
+                    const weight = weightKg || 70;
+                    // Heuristic: 1 rep approx 0.1 to 0.25 calories depending on movement
+                    const calsPerRep = (met * 3.5 * weight / 200) * (3 / 60); 
+                    setCalories(prev => prev + calsPerRep);
+                  }
+                  if (onRepUpdate) onRepUpdate(repsRef.current);
+                }
 
-            if (Math.random() < 0.2) {
-              setRepProgress(Math.round(res.progress));
-            }
+                // Set completion logic evaluated immediately upon a rep trigger
+                if (repsRef.current >= targetReps) {
+                  // Freeze workout engine to lock state
+                  setIsResting(true);
+                  isRestingRef.current = true;
+                  
+                  // Log performance for the current set
+                  setLogsRef.current.push({
+                    set: currentSetRef.current,
+                    reps: repsRef.current,
+                    accuracy: repsRef.current > 0 ? Math.round((successRepsRef.current / repsRef.current) * 100) : 0
+                  });
 
-            // Draw ALL angle labels on BOTH sides
-            ctx.font = '22px Arial';
-            for (const a of computedAngles) {
-              const label = a.name ? `${a.name}: ` : '';
-              if (a.leftAngle !== null && a.pxL) {
-                ctx.fillStyle = currentStatus === 'success' ? '#22c55e' : '#ffffff';
-                ctx.fillText(label + Math.round(a.leftAngle) + '°', a.pxL.x + 15, a.pxL.y);
+                  if (currentSetRef.current >= targetSets) {
+                    speak(`Workout complete! You did a fantastic job.`);
+                    if (onComplete) onComplete();
+                  } else {
+                    speak(`Set ${currentSetRef.current} complete. Take a breather.`);
+                  }
+                }
               }
-              if (a.rightAngle !== null && a.pxR) {
-                ctx.fillStyle = currentStatus === 'success' ? '#22c55e' : '#ffffff';
-                const text = label + Math.round(a.rightAngle) + '°';
-                ctx.fillText(text, a.pxR.x - ctx.measureText(text).width - 15, a.pxR.y);
+
+              // Form status overrides unless uncalibrated
+              if (currentStatus !== 'uncalibrated') {
+                const correction = coreCorrection;
+
+                if (correction) {
+                  currentStatus = 'warning';
+                  if (correction !== lastFeedbackRef.current) {
+                    lastFeedbackRef.current = correction;
+                    setFeedbackMsg(correction);
+                    setFormStatus('warning');
+                    speak(correction, isMuted);
+                  }
+                } else if (res.isCorrect) {
+                  currentStatus = 'success';
+                } else if (res.progress > 15) {
+                  currentStatus = 'inProgress';
+                }
               }
+
+              if (!currentStatus.includes('warning') && res.feedback && res.feedback !== lastFeedbackRef.current) {
+                lastFeedbackRef.current = res.feedback;
+                setFeedbackMsg(res.feedback);
+                setFormStatus(currentStatus);
+                speak(res.feedback.replace(/[✅🔥]/g, ''), isMuted);
+              }
+
+              if (Math.random() < 0.2) {
+                setRepProgress(Math.round(res.progress));
+              }
+
+              // Draw ONLY angle degrees on BOTH sides for a cleaner look
+              ctx.font = '700 24px Outfit, system-ui'; // Modern premium font style
+              for (const a of computedAngles) {
+                if (a.leftAngle !== null && a.pxL) {
+                  ctx.fillStyle = currentStatus === 'success' ? '#22c55e' : (currentStatus === 'warning' ? '#ff8c00' : '#ffffff');
+                  ctx.fillText(Math.round(a.leftAngle) + '°', a.pxL.x + 15, a.pxL.y);
+                }
+                if (a.rightAngle !== null && a.pxR) {
+                  ctx.fillStyle = currentStatus === 'success' ? '#22c55e' : (currentStatus === 'warning' ? '#ff8c00' : '#ffffff');
+                  const text = Math.round(a.rightAngle) + '°';
+                  ctx.fillText(text, a.pxR.x - ctx.measureText(text).width - 15, a.pxR.y);
+                }
+              }
+            } else {
+              // ── UNCALIBRATED STATE ──
+              // Reset progress bar and ignore all movements
+              if (repProgress !== 0) setRepProgress(0);
+              
+              // Only speak if user is actually moving (trying to exercise)
+              const anyHighVis = landmarks.some(lm => lm.visibility > 0.8);
+              if (anyHighVis && Math.random() < 0.01) { 
+                 speak("Please step back so I can see your full body and start tracking.", isMuted);
+              }
+              
+              // Don't draw angles when uncalibrated for a cleaner 'waiting' look
             }
           }
+
 
           // Draw skeleton with status color
           drawConnections(ctx, drawLandmarks, canvas.width, canvas.height, currentStatus);
@@ -373,6 +472,17 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
 
         // FPS
         const now = performance.now();
+        const deltaTime = (now - lastFrameTimeRef.current) / 1000; // in seconds
+        lastFrameTimeRef.current = now;
+
+        // Track durations for analytics (only while active)
+        if (!isRestingRef.current) {
+          totalAllRepDurationRef.current += deltaTime;
+          if (!isFormViolatedRef.current) {
+            totalGoodDurationRef.current += deltaTime;
+          }
+        }
+
         frameTimesRef.current.push(now);
         frameTimesRef.current = frameTimesRef.current.filter((t) => now - t < 1000);
         fpsRef.current = frameTimesRef.current.length;
@@ -418,9 +528,15 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
         uid: currentUser.uid,
         exercise_name: exerciseType,
         reps_count: repsRef.current,
-        accuracy: Math.max(formScore, 10), // Minimum 10% to avoid discouragement
+        success_reps_count: successRepsRef.current,
+        accuracy: Math.max(formScore, 10),
         duration_seconds: durationSec,
-        date: new Date().toISOString().split('T')[0],
+        total_calories: calories,
+        total_good_duration: Math.round(totalGoodDurationRef.current),
+        total_all_rep_duration: Math.round(totalAllRepDurationRef.current),
+        performance_breakdown: setLogsRef.current,
+        workout_day: workoutDayProp || searchParams.get('day') || 'day_1',
+        date: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
         created_at: new Date().toISOString(),
       });
 
@@ -464,9 +580,17 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
           </button>
           <h1 className="cv-title">🎥 AI Workout Tracker</h1>
           <div className="cv-stats">
-            <div className="cv-reps-badge">
-              <span className="reps-num">{repsDisplay}</span>
-              <span className="reps-label">REPS</span>
+            <div className="cv-stat-box">
+              <span className="stat-val">{currentSetRef.current} / {targetSets}</span>
+              <span className="stat-label">SET</span>
+            </div>
+            <div className="cv-stat-box highlight">
+              <span className="stat-val">{repsDisplay} / {targetReps}</span>
+              <span className="stat-label">REPS</span>
+            </div>
+            <div className="cv-stat-box calories">
+              <span className="stat-val">{calories.toFixed(1)}</span>
+              <span className="stat-label">KCAL</span>
             </div>
           </div>
         </header>
@@ -590,6 +714,89 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
           <div className="progress-gauge-value">{repProgress}%</div>
         </div>
 
+        {/* ── Set Complete Rest Overlay ─────────────────────── */}
+        {isResting && (
+          <div className="rest-overlay">
+            <div className="rest-content">
+              {repsRef.current === 0 && currentSetRef.current === 1 && !setLogsRef.current.length ? (
+                <>
+                  <h2>Ready for Set 1? 🔥</h2>
+                  <p>Get into position and click start when ready.</p>
+                  <div className="rest-timer" style={{ fontSize: '2.5rem' }}>{targetSets} Sets</div>
+                  <button 
+                    className="btn-next-set" 
+                    onClick={() => {
+                      repsRef.current = 0;
+                      setRepsDisplay(0);
+                      successRepsRef.current = 0;
+                      // Ensure tracking engine state is reset
+                      const config = getExerciseConfig(exerciseType) || getExerciseConfig('default');
+                      workoutStateRef.current = config.startPosition || 'up';
+                      isFormViolatedRef.current = false;
+                      setRepProgress(0);
+                      setFeedbackMsg('');
+                      if (onRepUpdate) onRepUpdate(0);
+
+                      setIsResting(false);
+                      isRestingRef.current = false;
+                      speak("Set 1 started. Good luck.");
+                    }}
+                  >
+                    Start Workout →
+                  </button>
+                </>
+              ) : currentSetRef.current >= targetSets && repsRef.current >= targetReps ? (
+                <>
+                  <h2>Workout Complete! 🏆</h2>
+                  <p>You've finished all prescribed sets for {exerciseType}.</p>
+                  <div className="rest-timer" style={{ fontSize: '2.5rem' }}>Goal Met!</div>
+                  <button 
+                    className="btn-next-set" 
+                    onClick={async () => {
+                      setSaving(true);
+                      await saveWorkoutLog();
+                      setSaving(false);
+                      if (onClose) onClose();
+                    }}
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving...' : 'Finish & Exit'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2>Set {currentSetRef.current} Complete! 🔥</h2>
+                  <p>Take a 30s breather or start the next set now.</p>
+                  <div className="rest-timer">30s</div>
+                  <button 
+                    className="btn-next-set" 
+                    onClick={() => {
+                      currentSetRef.current += 1;
+                      setCurrentSet(currentSetRef.current);
+                      repsRef.current = 0;
+                      setRepsDisplay(0);
+                      successRepsRef.current = 0;
+                      // Ensure tracking engine state is reset
+                      const config = getExerciseConfig(exerciseType) || getExerciseConfig('default');
+                      workoutStateRef.current = config.startPosition || 'up';
+                      isFormViolatedRef.current = false;
+                      setRepProgress(0);
+                      setFeedbackMsg('');
+                      if (onRepUpdate) onRepUpdate(0);
+
+                      setIsResting(false);
+                      isRestingRef.current = false;
+                      speak(`Set ${currentSetRef.current} started.`);
+                    }}
+                  >
+                    Start Next Set →
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="fps-counter" id="fps-counter">{fps} FPS</div>
 
 
@@ -597,5 +804,3 @@ function CameraView({ embedded = false, exerciseName: exerciseNameProp, onClose,
     </div>
   );
 }
-
-export default CameraView;

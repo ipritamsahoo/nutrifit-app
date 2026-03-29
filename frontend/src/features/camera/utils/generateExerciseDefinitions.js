@@ -51,13 +51,13 @@ const ELBOW = {
   curl_drag:        { joints: JOINTS.elbow, upAngle: 58,  downAngle: 148, name: 'elbow' },
   curl_spider:      { joints: JOINTS.elbow, upAngle: 25,  downAngle: 140, name: 'elbow' },
   curl_cable:       { joints: JOINTS.elbow, upAngle: 32,  downAngle: 150, name: 'elbow' },
-  press_bench:      { joints: JOINTS.elbow, upAngle: 165, downAngle: 80,  name: 'elbow' },
-  press_incline:    { joints: JOINTS.elbow, upAngle: 168, downAngle: 75,  name: 'elbow' },
-  press_decline:    { joints: JOINTS.elbow, upAngle: 162, downAngle: 82,  name: 'elbow' },
-  press_floor:      { joints: JOINTS.elbow, upAngle: 170, downAngle: 90,  name: 'elbow' },
-  press_overhead:   { joints: JOINTS.elbow, upAngle: 170, downAngle: 85,  name: 'elbow' },
-  pushup:           { joints: JOINTS.elbow, upAngle: 165, downAngle: 75,  name: 'elbow' },
-  dip:              { joints: JOINTS.elbow, upAngle: 165, downAngle: 80,  name: 'elbow' },
+  press_bench:      { joints: JOINTS.elbow, upAngle: 160, downAngle: 90,  name: 'elbow' },
+  press_incline:    { joints: JOINTS.elbow, upAngle: 160, downAngle: 95,  name: 'elbow' },
+  press_decline:    { joints: JOINTS.elbow, upAngle: 155, downAngle: 95,  name: 'elbow' },
+  press_floor:      { joints: JOINTS.elbow, upAngle: 160, downAngle: 100, name: 'elbow' },
+  press_overhead:   { joints: JOINTS.elbow, upAngle: 152, downAngle: 100, name: 'elbow' },
+  pushup:           { joints: JOINTS.elbow, upAngle: 158, downAngle: 90,  name: 'elbow' },
+  dip:              { joints: JOINTS.elbow, upAngle: 158, downAngle: 90,  name: 'elbow' },
   tricep_extension: { joints: JOINTS.elbow, upAngle: 170, downAngle: 55,  name: 'elbow' },
   tricep_pushdown:  { joints: JOINTS.elbow, upAngle: 170, downAngle: 60,  name: 'elbow' },
   tricep_kickback:  { joints: JOINTS.elbow, upAngle: 175, downAngle: 70,  name: 'elbow' },
@@ -71,7 +71,8 @@ const ELBOW = {
 
 // ── SHOULDER ANGLES ──
 const SHOULDER = {
-  press_overhead:   { joints: JOINTS.shoulder, upAngle: 170, downAngle: 80,  name: 'shoulder' },
+  press_overhead:   { joints: JOINTS.shoulder, upAngle: 155, downAngle: 85,  name: 'shoulder' },
+  squat_overhead:   { joints: JOINTS.shoulder, upAngle: 155, downAngle: 150, name: 'shoulder_stable' },
   press_bench:      { joints: JOINTS.shoulder, upAngle: 80,  downAngle: 40,  name: 'shoulder' },
   press_incline:    { joints: JOINTS.shoulder, upAngle: 110, downAngle: 45,  name: 'shoulder' },
   press_decline:    { joints: JOINTS.shoulder, upAngle: 65,  downAngle: 35,  name: 'shoulder' },
@@ -91,23 +92,24 @@ const SHOULDER = {
 
 // ── KNEE ANGLES ──
 const KNEE = {
-  squat_standard:   { joints: JOINTS.knee, upAngle: 172, downAngle: 85,  name: 'knee' },
-  squat_deep:       { joints: JOINTS.knee, upAngle: 172, downAngle: 70,  name: 'knee' },
-  squat_half:       { joints: JOINTS.knee, upAngle: 172, downAngle: 110, name: 'knee' },
-  squat_sumo:       { joints: JOINTS.knee, upAngle: 170, downAngle: 90,  name: 'knee' },
-  squat_split:      { joints: JOINTS.knee, upAngle: 170, downAngle: 85,  name: 'knee' },
-  squat_sissy:      { joints: JOINTS.knee, upAngle: 170, downAngle: 75,  name: 'knee' },
-  lunge_standard:   { joints: JOINTS.knee, upAngle: 170, downAngle: 88,  name: 'knee' },
-  lunge_walking:    { joints: JOINTS.knee, upAngle: 170, downAngle: 85,  name: 'knee' },
-  lunge_reverse:    { joints: JOINTS.knee, upAngle: 170, downAngle: 90,  name: 'knee' },
-  lunge_lateral:    { joints: JOINTS.knee, upAngle: 170, downAngle: 95,  name: 'knee' },
-  lunge_curtsy:     { joints: JOINTS.knee, upAngle: 170, downAngle: 88,  name: 'knee' },
-  deadlift_conv:    { joints: JOINTS.knee, upAngle: 170, downAngle: 130, name: 'knee' },
-  deadlift_sumo:    { joints: JOINTS.knee, upAngle: 170, downAngle: 115, name: 'knee' },
-  deadlift_rdl:     { joints: JOINTS.knee, upAngle: 170, downAngle: 155, name: 'knee' },
-  deadlift_stiff:   { joints: JOINTS.knee, upAngle: 175, downAngle: 160, name: 'knee' },
-  leg_extension:    { joints: JOINTS.knee, upAngle: 170, downAngle: 80,  name: 'knee' },
-  leg_curl:         { joints: JOINTS.knee, upAngle: 50,  downAngle: 165, name: 'knee' },
+  squat_overhead:   { joints: JOINTS.knee, upAngle: 155, downAngle: 115, name: 'knee' },
+  squat_standard:   { joints: JOINTS.knee, upAngle: 155, downAngle: 115, name: 'knee' },
+  squat_deep:       { joints: JOINTS.knee, upAngle: 160, downAngle: 100, name: 'knee' },
+  squat_half:       { joints: JOINTS.knee, upAngle: 160, downAngle: 120, name: 'knee' },
+  squat_sumo:       { joints: JOINTS.knee, upAngle: 160, downAngle: 115, name: 'knee' },
+  squat_split:      { joints: JOINTS.knee, upAngle: 160, downAngle: 110, name: 'knee' },
+  squat_sissy:      { joints: JOINTS.knee, upAngle: 160, downAngle: 105, name: 'knee' },
+  lunge_standard:   { joints: JOINTS.knee, upAngle: 160, downAngle: 115, name: 'knee' },
+  lunge_walking:    { joints: JOINTS.knee, upAngle: 160, downAngle: 110, name: 'knee' },
+  lunge_reverse:    { joints: JOINTS.knee, upAngle: 160, downAngle: 115, name: 'knee' },
+  lunge_lateral:    { joints: JOINTS.knee, upAngle: 160, downAngle: 120, name: 'knee' },
+  lunge_curtsy:     { joints: JOINTS.knee, upAngle: 160, downAngle: 115, name: 'knee' },
+  deadlift_conv:    { joints: JOINTS.knee, upAngle: 165, downAngle: 145, name: 'knee' },
+  deadlift_sumo:    { joints: JOINTS.knee, upAngle: 165, downAngle: 130, name: 'knee' },
+  deadlift_rdl:     { joints: JOINTS.knee, upAngle: 165, downAngle: 160, name: 'knee' },
+  deadlift_stiff:   { joints: JOINTS.knee, upAngle: 168, downAngle: 170, name: 'knee' },
+  leg_extension:    { joints: JOINTS.knee, upAngle: 160, downAngle: 100, name: 'knee' },
+  leg_curl:         { joints: JOINTS.knee, upAngle: 65,  downAngle: 150, name: 'knee' },
   leg_press:        { joints: JOINTS.knee, upAngle: 172, downAngle: 85,  name: 'knee' },
   step_up:          { joints: JOINTS.knee, upAngle: 172, downAngle: 95,  name: 'knee' },
   hip_thrust_knee:  { joints: JOINTS.knee, upAngle: 90,  downAngle: 90,  name: 'knee' }, // isometric ~90
@@ -187,6 +189,7 @@ function classifyExercise(name, muscleGroup) {
 
     return {
       angles: [elbow],
+      metValue: 3.5,
       startPosition: 'down', category: 'upper_body', isPush: false,
       lerpSpeed: 0.50, kalmanNoise: 0.05
     };
@@ -208,6 +211,7 @@ function classifyExercise(name, muscleGroup) {
 
     return {
       angles: [elbow],
+      metValue: 3.5,
       startPosition: 'up', category: 'upper_body', isPush: true,
       lerpSpeed: 0.50, kalmanNoise: 0.05
     };
@@ -222,6 +226,7 @@ function classifyExercise(name, muscleGroup) {
         { ...ELBOW.dip },
         { ...SHOULDER.dip }
       ],
+      metValue: 5.0,
       startPosition: 'up', category: 'upper_body', isPush: true,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
@@ -241,6 +246,7 @@ function classifyExercise(name, muscleGroup) {
     }
     return {
       angles: [elbow, shoulder],
+      metValue: 4.5,
       startPosition: 'up', category: 'upper_body', isPush: true,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
@@ -269,30 +275,76 @@ function classifyExercise(name, muscleGroup) {
 
     return {
       angles: [elbow, shoulder],
+      metValue: 6.0,
       startPosition: 'down', category: 'upper_body', isPush: true,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
   }
 
   // ══════════════════════════════════════════════════
-  // 6. SHOULDER PRESS / OVERHEAD PRESS / MILITARY — Primary: shoulder, Secondary: elbow
+  // 6. SHOULDER PRESS / OVERHEAD PRESS / MILITARY
+  //    Primary: SHOULDER (hip→shoulder→elbow) — reliable from front cam, 80°+ ROM
+  //    Secondary: ELBOW (shoulder→elbow→wrist) — for form display
   // ══════════════════════════════════════════════════
   if ((n.includes('shoulder press') || n.includes('overhead press') || n.includes('military press') ||
        n.includes('arnold press') || n.includes('push press') || n.includes('z press') ||
        n.includes('landmine press') || n.includes('viking press') ||
        (n.includes('press') && mg === 'shoulders'))) {
-    let shoulder = { ...SHOULDER.press_overhead };
-    let elbow = { ...ELBOW.press_overhead };
-    if (n.includes('arnold')) { shoulder.downAngle -= 10; }
-    if (n.includes('landmine')) { shoulder.upAngle -= 10; shoulder.downAngle += 10; }
-    if (n.includes('seated')) { shoulder.upAngle += 2; }
-    if (n.includes('dumbbell')) { shoulder.downAngle -= 5; }
-    if (n.includes('behind neck') || n.includes('behind the neck')) { shoulder.downAngle -= 10; }
+
+    // SHOULDER is PRIMARY — large well-detected landmarks, 80° ROM
+    let shoulder = {
+      joints: JOINTS.shoulder,  // [23, 11, 13] = hip→shoulder→elbow
+      upAngle: 162,             // arms fully overhead
+      downAngle: 78,            // upper arms near shoulder height
+      name: 'shoulder'
+    };
+
+    // ELBOW is SECONDARY — for form display (noisy wrist when arms overhead)
+    let elbow = {
+      joints: JOINTS.elbow,     // [11, 13, 15] = shoulder→elbow→wrist
+      upAngle: 165,             // arms nearly straight at top
+      downAngle: 82,            // elbows bent at bottom
+      name: 'elbow'
+    };
+
+    // Form rules with realistic thresholds for webcam tracking
+    const formRules = [
+      { type: 'forward_drift', joints: [15, 11], threshold: 0.12, message: 'Press straight up, not forward.' },
+      { type: 'flare', joints: [11, 13, 15], threshold: 0.10, message: 'Keep elbows under the weight.' },
+      { type: 'alignment', joints: [11, 23, 27], threshold: 18, message: 'Brace your core — ribs down.' }
+    ];
+
+    // ── Sub-variant adjustments ──
+    if (n.includes('arnold')) {
+      shoulder.downAngle = 68;    // Arnold goes lower (arms rotated in at bottom)
+      elbow.downAngle = 78;
+    }
+    if (n.includes('landmine')) {
+      shoulder.upAngle = 148;     // Landmine doesn't reach full overhead
+      shoulder.downAngle = 90;
+    }
+    if (n.includes('seated')) {
+      shoulder.upAngle += 3;      // Seated allows slightly higher
+    }
+    if (n.includes('push press')) {
+      shoulder.downAngle += 5;    // Push press: less ROM at bottom (explosive)
+    }
+    if (n.includes('behind neck') || n.includes('behind the neck')) {
+      shoulder.downAngle = 70;    // Behind-neck goes deeper
+    }
+    if (n.includes('single arm') || n.includes('single-arm')) {
+      shoulder.downAngle += 3;    // Single arm slightly less ROM
+    }
+    if (n.includes('kettlebell') && n.includes('bottoms up')) {
+      shoulder.upAngle = 158;     // Bottoms-up = more control, less ROM
+      elbow.upAngle = 160;
+    }
 
     return {
-      angles: [shoulder, elbow],
+      angles: [shoulder, elbow],  // SHOULDER first = primary rep driver
+      formRules,
       startPosition: 'down', category: 'upper_body', isPush: true,
-      lerpSpeed: 0.45, kalmanNoise: 0.06
+      lerpSpeed: 0.40, kalmanNoise: 0.06
     };
   }
 
@@ -361,6 +413,7 @@ function classifyExercise(name, muscleGroup) {
 
     return {
       angles: [elbow, shoulder],
+      metValue: 5.5,
       startPosition: 'down', category: 'upper_body', isPush: false,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
@@ -375,7 +428,6 @@ function classifyExercise(name, muscleGroup) {
         { ...SHOULDER.upright_row },
         { ...ELBOW.row_standard, upAngle: 55, downAngle: 160 }
       ],
-      startPosition: 'down', category: 'upper_body', isPush: false,
       lerpSpeed: 0.48, kalmanNoise: 0.05
     };
   }
@@ -400,11 +452,11 @@ function classifyExercise(name, muscleGroup) {
     }
     return {
       angles: [shoulder, elbow],
+      metValue: 5.0,
       startPosition: 'up', category: 'upper_body', isPush: false,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
   }
-
   // ══════════════════════════════════════════════════
   // 13. PULL-UPS / CHIN-UPS — Primary: shoulder, Secondary: elbow
   // ══════════════════════════════════════════════════
@@ -417,6 +469,7 @@ function classifyExercise(name, muscleGroup) {
     if (n.includes('close')) { elbow.upAngle -= 8; }
     return {
       angles: [shoulder, elbow],
+      metValue: 6.0,
       startPosition: 'up', category: 'upper_body', isPush: false,
       lerpSpeed: 0.40, kalmanNoise: 0.07
     };
@@ -428,6 +481,7 @@ function classifyExercise(name, muscleGroup) {
   if (n.includes('face pull')) {
     return {
       angles: [{ ...SHOULDER.face_pull }],
+      metValue: 3.5,
       startPosition: 'down', category: 'upper_body', isPush: false,
       lerpSpeed: 0.50, kalmanNoise: 0.05
     };
@@ -439,13 +493,61 @@ function classifyExercise(name, muscleGroup) {
   if (n.includes('shrug')) {
     return {
       angles: [{ ...SHOULDER.shrug }],
+      metValue: 3.0,
       startPosition: 'down', category: 'upper_body', isPush: false,
       lerpSpeed: 0.55, kalmanNoise: 0.04
     };
   }
 
   // ══════════════════════════════════════════════════
-  // 16. SQUATS — Primary: knee, Secondary: hip
+  // 16a. POLE OVERHEAD SQUAT (must match before generic squat)
+  // ══════════════════════════════════════════════════
+  if (n.includes('pole overhead squat')) {
+    const knee = { ...KNEE.squat_overhead };
+    const hip = { ...HIP.squat_standard };
+
+    const formRules = [
+      { type: 'angle_range', joints: [23, 11, 15], min: 110, message: 'Keep your hands overhead!' }, // Hip-Shoulder-Wrist
+      { type: 'forward_drift', joints: [15, 11], threshold: 0.12, message: 'Keep the pole stable overhead.' },
+      { type: 'alignment', joints: [11, 23, 27], threshold: 12, message: 'Keep your torso more upright.' },
+      { type: 'heel_lift', joints: [29, 31], threshold: 0.05, message: 'Keep your heels on the floor.' },
+      { type: 'heel_lift', joints: [30, 32], threshold: 0.05, message: 'Keep your heels on the floor.' },
+    ];
+
+    return {
+      angles: [knee, hip],
+      formRules,
+      startPosition: 'up', category: 'lower_body',
+      lerpSpeed: 0.40, kalmanNoise: 0.08
+    };
+  }
+
+  // ══════════════════════════════════════════════════
+  // 16c. BODYWEIGHT SQUAT (Arms in front)
+  // ══════════════════════════════════════════════════
+  if (n.includes('bodyweight squat') || n.includes('body weight squat')) {
+    const knee = { ...KNEE.squat_standard, upAngle: 140, downAngle: 100 }; // Extremely lenient
+    const hip = { ...HIP.squat_standard, upAngle: 145, downAngle: 110 };
+
+    const formRules = [
+      {
+        type: 'angle_range',
+        joints: [11, 13, 15], // Shoulder, Elbow, Wrist
+        max: 110, // Hands at chest level (acute angle)
+        message: 'Keep your hands together at chest level!'
+      }
+    ];
+
+    return {
+      angles: [knee, hip],
+      formRules,
+      startPosition: 'up', category: 'lower_body',
+      lerpSpeed: 0.40, kalmanNoise: 0.08
+    };
+  }
+
+  // ══════════════════════════════════════════════════
+  // 16b. SQUATS — Primary: knee, Secondary: hip
   // ══════════════════════════════════════════════════
   if (n.includes('squat')) {
     let knee = { ...KNEE.squat_standard };
@@ -487,23 +589,54 @@ function classifyExercise(name, muscleGroup) {
   if (n.includes('lunge')) {
     let knee = { ...KNEE.lunge_standard };
     let hip = { ...HIP.lunge_standard };
-    if (n.includes('walking')) {
+    
+    // CRITICAL FIX: The app averages left and right joint angles.
+    // In a lunge, the front knee is ~90° and the back knee is ~90°, so the average is ~90°.
+    // But for the hip, the front hip is ~90° and the back hip is extended (~180°).
+    // The average hip angle during a lunge is therefore ~(90+180)/2 = 135°.
+    // Previously, hip downAngle was 95°, which was physically impossible to reach and 
+    // caused all lunges to fail the >65% progress check (isCorrect = false).
+    
+    knee.upAngle = 165;
+    knee.downAngle = 105; // Requires decent depth 
+    
+    hip.upAngle = 175;
+    hip.downAngle = 135; // Accurate target for averaged lunge hips
+
+    let formRules = [
+      // Check torso alignment: Shoulder-Hip-Ankle should not deviate too much from upright.
+      // But lunges track both sides. So we use the alignment rule on the torso.
+      { type: 'alignment', joints: [11, 23, 27], threshold: 30, message: 'Keep your chest up and torso upright.' }
+    ];
+
+    if (n.includes('forward')) {
+      knee.downAngle = 100; // Deeper requirement for forward lunges
+      // Ensure front knee doesn't drift dangerously far past toes
+      formRules.push({ type: 'forward_drift', joints: [25, 31], threshold: 0.20, message: 'Don\'t let your knee cave too far over your toes.' });
+    }
+    else if (n.includes('walking')) {
       knee = { ...KNEE.lunge_walking }; hip = { ...HIP.lunge_walking };
+      knee.downAngle = 105; hip.downAngle = 135;
     }
-    if (n.includes('reverse')) {
+    else if (n.includes('reverse')) {
       knee = { ...KNEE.lunge_reverse }; hip = { ...HIP.lunge_reverse };
+      knee.downAngle = 105; hip.downAngle = 138;
     }
-    if (n.includes('lateral') || n.includes('side')) {
+    else if (n.includes('lateral') || n.includes('side')) {
       knee = { ...KNEE.lunge_lateral }; hip = { ...HIP.lunge_lateral };
+      knee.downAngle = 120; hip.downAngle = 145; // Lateral behaves slightly differently
     }
-    if (n.includes('curtsy') || n.includes('curtsey')) {
+    else if (n.includes('curtsy') || n.includes('curtsey')) {
       knee = { ...KNEE.lunge_curtsy }; hip = { ...HIP.lunge_curtsy };
+      knee.downAngle = 110; hip.downAngle = 140;
     }
+    
     if (n.includes('barbell')) { knee.downAngle += 2; }
-    if (n.includes('dumbbell')) { hip.downAngle += 3; }
+    if (n.includes('dumbbell')) { hip.downAngle += 2; }
 
     return {
-      angles: [knee, hip],
+      angles: [knee, hip], // Knee drives reps, hip validates form
+      formRules: formRules,
       startPosition: 'up', category: 'lower_body', isPush: true,
       lerpSpeed: 0.40, kalmanNoise: 0.07
     };
@@ -535,6 +668,7 @@ function classifyExercise(name, muscleGroup) {
 
     return {
       angles: [hip, knee],
+      metValue: 7.5,
       startPosition: 'up', category: 'lower_body', isPush: false,
       lerpSpeed: 0.40, kalmanNoise: 0.07
     };
@@ -549,6 +683,7 @@ function classifyExercise(name, muscleGroup) {
     if (n.includes('band')) { hip.upAngle -= 3; }
     return {
       angles: [hip],
+      metValue: 5.5,
       startPosition: 'down', category: 'lower_body', isPush: true,
       lerpSpeed: 0.40, kalmanNoise: 0.07
     };
@@ -576,6 +711,7 @@ function classifyExercise(name, muscleGroup) {
   if (n.includes('leg extension') || n.includes('knee extension')) {
     return {
       angles: [{ ...KNEE.leg_extension }],
+      metValue: 4.0,
       startPosition: 'down', category: 'lower_body', isPush: true,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
@@ -590,6 +726,7 @@ function classifyExercise(name, muscleGroup) {
     if (n.includes('nordic') || n.includes('natural')) { knee.upAngle += 10; }
     return {
       angles: [knee],
+      metValue: 4.0,
       startPosition: 'down', category: 'lower_body', isPush: false,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
@@ -601,6 +738,7 @@ function classifyExercise(name, muscleGroup) {
   if (n.includes('step up') || n.includes('step-up') || n.includes('stepup')) {
     return {
       angles: [{ ...KNEE.step_up }, { ...HIP.step_up }],
+      metValue: 6.0,
       startPosition: 'down', category: 'lower_body', isPush: true,
       lerpSpeed: 0.40, kalmanNoise: 0.07
     };
@@ -616,6 +754,7 @@ function classifyExercise(name, muscleGroup) {
     if (n.includes('single')) { ankle.upAngle += 3; }
     return {
       angles: [ankle],
+      metValue: 3.5,
       startPosition: 'down', category: 'lower_body', isPush: true,
       lerpSpeed: 0.55, kalmanNoise: 0.04
     };
@@ -628,6 +767,7 @@ function classifyExercise(name, muscleGroup) {
       n.includes('reverse hyper')) {
     return {
       angles: [{ ...HIP.back_extension }],
+      metValue: 3.5,
       startPosition: 'down', category: 'core', isPush: false,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
@@ -647,17 +787,21 @@ function classifyExercise(name, muscleGroup) {
     if (n.includes('decline')) { hip.upAngle -= 10; }
     return {
       angles: [hip],
+      metValue: 4.0,
       startPosition: 'down', category: 'core', isPush: true,
       lerpSpeed: 0.50, kalmanNoise: 0.05
     };
   }
 
+  // (Pole Overhead Squat moved to block 16a above)
+
   // ══════════════════════════════════════════════════
-  // 27. PLANK (isometric — use trunk alignment)
+  // 28. PLANK (isometric — use trunk alignment)
   // ══════════════════════════════════════════════════
   if (n.includes('plank')) {
     return {
       angles: [{ ...TRUNK.plank }],
+      metValue: 3.8,
       startPosition: 'up', category: 'core', isPush: true,
       lerpSpeed: 0.30, kalmanNoise: 0.10
     };
@@ -700,6 +844,7 @@ function classifyExercise(name, muscleGroup) {
     }
     return {
       angles: [{ ...SHOULDER.lateral_raise }],
+      metValue: 3.5,
       startPosition: 'down', category: 'upper_body', isPush: true,
       lerpSpeed: 0.50, kalmanNoise: 0.05
     };
@@ -711,6 +856,7 @@ function classifyExercise(name, muscleGroup) {
   if (mg === 'biceps' || mg === 'forearms') {
     return {
       angles: [{ ...ELBOW.curl_standard }],
+      metValue: 3.5,
       startPosition: 'down', category: 'upper_body', isPush: false,
       lerpSpeed: 0.50, kalmanNoise: 0.05
     };
@@ -718,6 +864,7 @@ function classifyExercise(name, muscleGroup) {
   if (mg === 'triceps') {
     return {
       angles: [{ ...ELBOW.tricep_extension }],
+      metValue: 3.5,
       startPosition: 'up', category: 'upper_body', isPush: true,
       lerpSpeed: 0.50, kalmanNoise: 0.05
     };
@@ -725,6 +872,7 @@ function classifyExercise(name, muscleGroup) {
   if (mg === 'chest') {
     return {
       angles: [{ ...ELBOW.press_bench }, { ...SHOULDER.press_bench }],
+      metValue: 5.5,
       startPosition: 'down', category: 'upper_body', isPush: true,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
@@ -732,6 +880,7 @@ function classifyExercise(name, muscleGroup) {
   if (mg === 'shoulders' || mg === 'traps') {
     return {
       angles: [{ ...SHOULDER.press_overhead }, { ...ELBOW.press_overhead }],
+      metValue: 5.5,
       startPosition: 'down', category: 'upper_body', isPush: true,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
@@ -739,6 +888,7 @@ function classifyExercise(name, muscleGroup) {
   if (mg === 'lats' || mg === 'middle back' || mg === 'upper back' || mg === 'back' || mg === 'lower back') {
     return {
       angles: [{ ...ELBOW.row_standard }, { ...SHOULDER.row_shoulder }],
+      metValue: 5.0,
       startPosition: 'down', category: 'upper_body', isPush: false,
       lerpSpeed: 0.45, kalmanNoise: 0.06
     };
@@ -746,6 +896,7 @@ function classifyExercise(name, muscleGroup) {
   if (mg === 'quads' || mg === 'quadriceps') {
     return {
       angles: [{ ...KNEE.squat_standard }, { ...HIP.squat_standard }],
+      metValue: 7.5,
       startPosition: 'up', category: 'lower_body', isPush: true,
       lerpSpeed: 0.40, kalmanNoise: 0.07
     };
@@ -753,6 +904,7 @@ function classifyExercise(name, muscleGroup) {
   if (mg === 'hamstrings') {
     return {
       angles: [{ ...HIP.deadlift_rdl }, { ...KNEE.deadlift_rdl }],
+      metValue: 7.0,
       startPosition: 'up', category: 'lower_body', isPush: false,
       lerpSpeed: 0.40, kalmanNoise: 0.07
     };
@@ -760,6 +912,7 @@ function classifyExercise(name, muscleGroup) {
   if (mg === 'glutes') {
     return {
       angles: [{ ...HIP.hip_thrust }],
+      metValue: 5.5,
       startPosition: 'down', category: 'lower_body', isPush: true,
       lerpSpeed: 0.40, kalmanNoise: 0.07
     };
@@ -767,6 +920,7 @@ function classifyExercise(name, muscleGroup) {
   if (mg === 'calves') {
     return {
       angles: [{ ...ANKLE.calf_raise }],
+      metValue: 3.5,
       startPosition: 'down', category: 'lower_body', isPush: true,
       lerpSpeed: 0.55, kalmanNoise: 0.04
     };
@@ -774,6 +928,7 @@ function classifyExercise(name, muscleGroup) {
   if (mg === 'abdominals' || mg === 'abs' || mg === 'obliques') {
     return {
       angles: [{ ...HIP.crunch }],
+      metValue: 4.0,
       startPosition: 'down', category: 'core', isPush: true,
       lerpSpeed: 0.50, kalmanNoise: 0.05
     };
@@ -784,6 +939,7 @@ function classifyExercise(name, muscleGroup) {
   // ══════════════════════════════════════════════════
   return {
     angles: [{ joints: JOINTS.elbow, upAngle: 45, downAngle: 160, name: 'primary' }],
+    metValue: 3.5,
     startPosition: 'down', category: 'mixed', isPush: true,
     lerpSpeed: 0.40, kalmanNoise: 0.08
   };
@@ -846,6 +1002,7 @@ function main() {
 
     definitions[key] = {
       angles: anglesWithJitter,
+      formRules: config.formRules,
       startPosition: config.startPosition,
       category: config.category,
       isPush: config.isPush,
@@ -879,13 +1036,13 @@ function main() {
  */
 
 export const EXERCISE_DEFINITIONS = {\n`;
-
   for (const [name, def] of Object.entries(definitions)) {
     const anglesStr = def.angles.map(a => 
       `{ joints: [${a.joints.join(', ')}], name: "${a.name}", upAngle: ${a.upAngle}, downAngle: ${a.downAngle} }`
     ).join(', ');
 
-    output += `  "${name}": { angles: [${anglesStr}], startPosition: "${def.startPosition}", category: "${def.category}", isPush: ${def.isPush}, lerpSpeed: ${def.lerpSpeed}, kalmanNoise: ${def.kalmanNoise} },\n`;
+    const formRulesStr = def.formRules ? `, formRules: ${JSON.stringify(def.formRules)}` : '';
+    output += `  "${name}": { angles: [${anglesStr}]${formRulesStr}, startPosition: "${def.startPosition}", category: "${def.category}", isPush: ${def.isPush}, lerpSpeed: ${def.lerpSpeed}, kalmanNoise: ${def.kalmanNoise} },\n`;
   }
 
   output += `};\n`;

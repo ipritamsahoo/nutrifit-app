@@ -60,6 +60,61 @@ export default function DoctorDashboard() {
   const [planLoading, setPlanLoading] = useState(false);
 
 
+  /* ── 7-Day Chart State ─────────────────────────────── */
+  const [patientWeeklyData, setPatientWeeklyData] = useState([]);
+  const [activeDay, setActiveDay] = useState(null);
+
+  useEffect(() => {
+    if (!selectedPatient) return;
+    const fetchWeeklyData = async () => {
+      try {
+        const patientId = selectedPatient.uid || selectedPatient.id;
+        const q = query(
+          collection(db, 'logs'),
+          where('uid', '==', patientId)
+        );
+        const snap = await getDocs(q);
+        const logsMap = {};
+        snap.forEach(doc => {
+          const data = doc.data();
+          let dayKey = data.workout_day;
+
+          // Inference Fallback 1: Deep scan for Day marker in any field
+          if (!dayKey) {
+            const rawString = JSON.stringify(data);
+            const match = rawString.match(/day_([1-7])/);
+            if (match) dayKey = `day_${match[1]}`;
+          }
+
+          if (dayKey) {
+            // Favor the most recent log for each protocol day
+            if (!logsMap[dayKey] || data.timestamp > logsMap[dayKey].timestamp) {
+              logsMap[dayKey] = data;
+            }
+          }
+        });
+
+        // Build sequential array for Day 1 through 7
+        const dataArray = [];
+        for (let i = 1; i <= 7; i++) {
+           const key = `day_${i}`;
+           const history = logsMap[key];
+           dataArray.push({
+             day: `Day ${i}`,
+             // Use new daily metrics with multiple fallbacks for legacy data
+             diet: history ? (history.dietAdherence ?? history.dAdh ?? history.adherence ?? 0) : 0,
+             workout: history ? (history.exerciseAdherence ?? history.eAdh ?? history.adherence ?? 0) : 0
+           });
+        }
+        setPatientWeeklyData(dataArray);
+      } catch (err) {
+        console.error('Failed to fetch patient 7-day logs:', err);
+        setPatientWeeklyData([]);
+      }
+    };
+    fetchWeeklyData();
+  }, [selectedPatient]);
+
   /* ── Real-time Patient Listener ────────────────────── */
   useEffect(() => {
     if (!currentUser) return;
@@ -243,17 +298,7 @@ export default function DoctorDashboard() {
                 </div>
               )}
 
-              {/* Vitals */}
-              <div className="vitals-grid">
-                <div className="vital-card">
-                  <div className="vital-icon orange"><Flame size={20} /></div>
-                  <div><p className="vital-label">Burned</p><p className="vital-value">{selectedPatient.caloriesBurned ? `${selectedPatient.caloriesBurned} kcal` : '—'}</p></div>
-                </div>
-                <div className="vital-card">
-                  <div className="vital-icon cyan"><Timer size={20} /></div>
-                  <div><p className="vital-label">Duration</p><p className="vital-value">{selectedPatient.workoutDuration ? `${selectedPatient.workoutDuration} min` : '—'}</p></div>
-                </div>
-              </div>
+
 
               {/* Adherence Analytics */}
               <div className="analytics-grid">
@@ -294,6 +339,72 @@ export default function DoctorDashboard() {
                     </div>
                   </div>
                   <p className="gauge-label">Overall Adherence</p>
+                </div>
+              </div>
+
+              {/* 7-Day Progress Analytics Chart */}
+              <div className="analytics-section" style={{ marginTop: '24px' }}>
+                <div className="analytics-header">
+                  <div>
+                    <h3 className="section-title">7-Day Progress Analytics</h3>
+                    <p className="section-subtitle">Daily completion trends across key protocol metrics.</p>
+                  </div>
+                  <div className="legend-group">
+                    <div className="legend-item"><div className="dot dot-diet"></div> Diet</div>
+                    <div className="legend-item"><div className="dot dot-workout"></div> Therapy</div>
+                  </div>
+                </div>
+                
+                <div className="chart-wrapper">
+                  <div className="chart-inner">
+                    <div className="y-axis">
+                      <span className="axis-label" style={{ top: '0%' }}>100%</span>
+                      <span className="axis-label" style={{ top: '50%' }}>50%</span>
+                      <span className="axis-label" style={{ top: '100%' }}>0%</span>
+                    </div>
+
+                    <div className="svg-container">
+                      <svg className="chart-svg" viewBox="0 0 100 45" preserveAspectRatio="none" onMouseLeave={() => setActiveDay(null)}>
+                        <rect x="0" y="5" width="100" height="17.5" fill="#F8FAFC" />
+                        {patientWeeklyData.map((_, i) => (
+                          <line key={`v-${i}`} x1={5 + i * 15} y1="5" x2={5 + i * 15} y2="40" className="v-grid-line" />
+                        ))}
+                        <line x1="0" y1="5" x2="100" y2="5" className="h-grid-line" />
+                        <line x1="0" y1="22.5" x2="100" y2="22.5" className="h-grid-line" />
+                        <line x1="0" y1="40" x2="100" y2="40" className="chart-base-line" />
+                        {patientWeeklyData.map((d, i) => {
+                          const baseX = 5 + i * 15;
+                          const dietH = (d.diet / 100) * 35;
+                          const workoutH = (d.workout / 100) * 35;
+                          return (
+                            <g key={i}>
+                              <rect x={baseX - 3.5} y={40 - dietH} width="3" height={dietH} className="bar-diet" />
+                              <rect x={baseX + 0.5} y={40 - workoutH} width="3" height={workoutH} className="bar-workout" />
+                              <rect x={baseX - 6} y={0} width={12} height={45} fill="transparent" onMouseEnter={() => setActiveDay(i)} className="chart-hit-area" />
+                            </g>
+                          );
+                        })}
+                      </svg>
+                      {activeDay !== null && patientWeeklyData[activeDay] && (
+                        <div className="chart-tooltip" style={{ left: `${Math.min(Math.max(5 + activeDay * 15, 12), 88)}%` }}>
+                          <div className="tooltip-day">{patientWeeklyData[activeDay].day}</div>
+                          <div className="tooltip-row">
+                            <span>Diet</span>
+                            <span style={{fontWeight:'bold', color: 'var(--clinical-slate-900)'}}>{patientWeeklyData[activeDay].diet}%</span>
+                          </div>
+                          <div className="tooltip-row">
+                            <span>Therapy</span>
+                            <span style={{fontWeight:'bold', color: 'var(--clinical-slate-900)'}}>{patientWeeklyData[activeDay].workout}%</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="x-axis">
+                    {patientWeeklyData.map((d, i) => (
+                      <span key={i} className="x-label" style={{ left: `${(5 + i * 15)}%` }}>{d.day}</span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

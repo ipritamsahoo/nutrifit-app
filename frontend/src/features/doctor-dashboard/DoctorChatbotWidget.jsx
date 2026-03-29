@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Minimize2, Send, Bot, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import botIcon from '../chatbot/chatboticon.png';
 import './DoctorChatbotWidget.css';
 
 const API_URL = 'http://127.0.0.1:8000';
@@ -113,7 +114,9 @@ export default function DoctorChatbotWidget() {
         {messages.map((msg, i) => (
           <div key={i} className={`doc-msg-row ${msg.role === 'user' ? 'user-row' : 'bot-row'}`}>
             {msg.role === 'model' && (
-              <div className="doc-msg-avatar bot-avatar"><Bot size={14} /></div>
+              <div className="doc-msg-avatar bot-avatar">
+                <img src={botIcon} alt="NutriFit Bot" className="custom-doc-bot-logo" />
+              </div>
             )}
             <div 
               className={`doc-msg-bubble ${msg.role === 'user' ? 'doc-user-bubble' : 'doc-bot-bubble'}`}
@@ -124,7 +127,9 @@ export default function DoctorChatbotWidget() {
         
         {loading && (
           <div className="doc-msg-row bot-row">
-            <div className="doc-msg-avatar bot-avatar"><Bot size={14} /></div>
+            <div className="doc-msg-avatar bot-avatar">
+               <img src={botIcon} alt="NutriFit Bot" className="custom-doc-bot-logo" />
+            </div>
             <div className="doc-msg-bubble doc-bot-bubble typing-indicator">
               <span></span><span></span><span></span>
             </div>
