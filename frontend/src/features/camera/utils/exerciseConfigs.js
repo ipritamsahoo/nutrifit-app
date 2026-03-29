@@ -27,10 +27,49 @@ const DEFAULT_CONFIG = {
  *   angles[1+] = SECONDARY angles (form check + display)
  *   Each angle: { joints, name, upAngle, downAngle }
  */
+/**
+ * Gets the individual tracking configuration for a specific exercise.
+ * Supports "Smart Lookup" for partial names (e.g. "Overhead Press" -> "Shoulders - Overhead Press")
+ */
 export const getExerciseConfig = (exerciseName) => {
-  const config = EXERCISE_DEFINITIONS[exerciseName];
-  if (!config) return DEFAULT_CONFIG;
-  return config;
+  if (!exerciseName) return DEFAULT_CONFIG;
+  
+  // 1. Exact match (fastest)
+  let config = EXERCISE_DEFINITIONS[exerciseName];
+  if (config) return config;
+
+  // 2. Stripped match: "Muscle - Exercise" -> "Exercise"
+  const entries = Object.entries(EXERCISE_DEFINITIONS);
+  const strippedMatch = entries.find(([key]) => {
+    const parts = key.split(' - ');
+    const namePart = parts.length > 1 ? parts[1] : parts[0];
+    return namePart.toLowerCase() === exerciseName.toLowerCase();
+  });
+  if (strippedMatch) return strippedMatch[1];
+
+  // 3. Partial substring match
+  const partialMatch = entries.find(([key]) => 
+     key.toLowerCase().includes(exerciseName.toLowerCase())
+  );
+  if (partialMatch) return partialMatch[1];
+
+  return DEFAULT_CONFIG;
+};
+
+/**
+ * Normalizes an exercise name to the canonical key in EXERCISE_DEFINITIONS.
+ */
+export const normalizeExerciseName = (name) => {
+  if (!name) return null;
+  if (EXERCISE_DEFINITIONS[name]) return name;
+
+  const entries = Object.entries(EXERCISE_DEFINITIONS);
+  const matched = entries.find(([key]) => {
+    const parts = key.split(' - ');
+    const namePart = parts.length > 1 ? parts[1] : parts[0];
+    return namePart.toLowerCase() === name.toLowerCase() || key.toLowerCase().includes(name.toLowerCase());
+  });
+  return matched ? matched[0] : null;
 };
 
 export const ALL_EXERCISE_NAMES = Object.keys(EXERCISE_DEFINITIONS);

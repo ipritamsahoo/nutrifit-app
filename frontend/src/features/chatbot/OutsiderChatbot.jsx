@@ -10,6 +10,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import InteractiveMuscleMap from './InteractiveMuscleMap';
+import botIcon from './chatboticon.png';
 import './OutsiderChatbot.css';
 
 const API_URL = 'http://127.0.0.1:8000';
@@ -373,13 +374,15 @@ export default function OutsiderChatbot() {
       {/* Header */}
       <header className="chat-header">
         <div className="chat-brand">
-          <h1>NUTRIFIT <span style={{ color: 'var(--nf-primary)', fontSize: '13px', fontWeight: 'bold' }}>PRO</span></h1>
+          <div className="chatbot-brand-logo-wrapper">
+            <img src={botIcon} alt="NutriFit Logo" className="chatbot-brand-logo" />
+          </div>
+          <h1>NutriFit</h1>
         </div>
         <div className="chat-actions">
-          <button className="btn-dashboard" onClick={() => navigate('/workspace')}>
-            📊 Workspace
+          <button className="btn-logout-enhanced" onClick={handleLogout}>
+            Logout
           </button>
-          <button className="btn-ghost" onClick={handleLogout}>Logout</button>
         </div>
       </header>
 
@@ -392,7 +395,11 @@ export default function OutsiderChatbot() {
 
             return (
               <div key={i} className={`chat-bubble ${msg.role === 'user' ? 'user-bubble' : 'bot-bubble'}`}>
-                {msg.role === 'model' && <div className="bubble-avatar" style={{ color: 'var(--nf-primary)' }}>✦</div>}
+                {msg.role === 'model' && (
+                  <div className="bubble-avatar custom-logo-wrapper">
+                    <img src={botIcon} alt="NutriFit Bot" className="custom-bot-logo" />
+                  </div>
+                )}
                 
                 {msg.role === 'user' && (
                   <div className="bubble-avatar user-avatar">
@@ -413,7 +420,9 @@ export default function OutsiderChatbot() {
           {/* Loading indicator */}
           {loading && (
             <div className="chat-bubble bot-bubble">
-              <div className="bubble-avatar" style={{ color: 'var(--nf-primary)' }}>✦</div>
+              <div className="bubble-avatar custom-logo-wrapper">
+                <img src={botIcon} alt="NutriFit Bot" className="custom-bot-logo" />
+              </div>
               <div className="bubble-text typing-indicator">
                 <span></span><span></span><span></span>
               </div>

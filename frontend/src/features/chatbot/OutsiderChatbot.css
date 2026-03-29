@@ -4,6 +4,7 @@
   min-height: 100vh;
   background: var(--nf-bg);
   color: var(--nf-text-main);
+  font-family: 'Inter', sans-serif;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -27,17 +28,49 @@
 .chat-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.chatbot-brand-logo-wrapper {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: white;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15);
+  flex-shrink: 0;
+  border: 1px solid var(--nf-border);
+}
+
+.chatbot-brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: scale(3.2) translateY(1px);
+  transition: transform 0.3s ease;
+}
+
+.chat-brand:hover .chatbot-brand-logo {
+  transform: scale(3.4) translateY(1px) rotate(-5deg);
 }
 
 .chat-brand h1 {
-  font-size: 22px;
-  background: var(--nf-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 26px;
+  color: #2563eb; /* Matches --nf-primary / --clinical-blue */
   font-weight: 800;
-  word-spacing: -2px;
+  letter-spacing: -0.5px; /* Tighter for modern Inter look */
+  text-transform: none; /* Matches "NutriFit" casing on dashboard */
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+.chat-brand:hover h1 {
+  letter-spacing: 2px;
+  text-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
 }
 
 /* ── Chat Container ──────────────────────────────── */
@@ -118,6 +151,22 @@
   font-weight: 800;
   box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
 }
+
+.custom-logo-wrapper {
+  overflow: hidden;
+  background: white;
+  padding: 0;
+}
+
+.custom-bot-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: scale(1.65) translateY(3px); /* Shifted down to center the logo perfectly */
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+}
+
+
 
 .bubble-text {
   padding: 12px 18px;
@@ -360,6 +409,29 @@
   background: #f1f5f9;
   border-color: var(--nf-primary);
   color: var(--nf-primary);
+}
+
+.btn-logout-enhanced {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 8px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.05);
+}
+
+.btn-logout-enhanced:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
 }
 
 /* ── Background Blobs ────────────────────────────── */

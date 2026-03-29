@@ -409,7 +409,6 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
   const [exercises, setExercises] = useState([]);
 
   /* ── Footer ────────────────────────────────────────── */
-  const [duration, setDuration] = useState('2 Weeks');
 
   /* ── UI state ──────────────────────────────────────── */
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -1842,19 +1841,7 @@ export default function EnrollPrescribeModal({ doctorUid, onSuccess, onClose }) 
           {/* ── FOOTER ────────────────────────────────────── */}
           <div className="rx-footer">
             <div className="rx-footer-left">
-              <div className="rx-footer-icon">📅</div>
-              <div>
-                <span className="rx-footer-label">Plan Duration</span>
-                <div className="rx-select-wrap">
-                  <select className="rx-select" value={duration} onChange={e => setDuration(e.target.value)}>
-                    <option value="1 Week">1 Week</option>
-                    <option value="2 Weeks">2 Weeks</option>
-                    <option value="4 Weeks">4 Weeks</option>
-                    <option value="3 Months">3 Months</option>
-                  </select>
-                  <span className="rx-select-chevron">▼</span>
-                </div>
-              </div>
+              {/* Plan Duration Removed as per request */}
             </div>
 
             <button

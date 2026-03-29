@@ -12,6 +12,7 @@ const STATUS_COLORS = {
   idle:        '#39FF14',   // Neon Green
   inProgress:  '#FFD700',   // Vivid Gold/Yellow 
   success:     '#39FF14',   // Neon Green + heavier glow for success
+  warning:     '#FF8C00',   // Dark Orange for form warnings
 };
 
 const MIN_VISIBILITY = 0.25;

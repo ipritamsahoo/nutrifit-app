@@ -578,16 +578,24 @@ def chat_with_coach(messages: list[dict], uid: str = "default_session") -> str:
 
     print(f"[Chat] Sending {len(api_messages)} messages to {_CHAT_MODEL} for {uid}")
     
-    try:
-        response = client.chat.completions.create(
-            model=_CHAT_MODEL,
-            messages=api_messages,
-            temperature=0.3
-        )
-        reply = response.choices[0].message.content or ""
-    except Exception as e:
-        print(f"[Chat] Error calling chat model: {e}")
-        return "I'm having trouble connecting to my brain right now. Could you repeat that?"
+    max_retries = 10
+    reply = ""
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model=_CHAT_MODEL,
+                messages=api_messages,
+                temperature=0.3
+            )
+            reply = response.choices[0].message.content or ""
+            break
+        except Exception as e:
+            print(f"[Chat] Error calling chat model (Attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(3) # Wait 3 seconds before retrying
+            else:
+                # If all retries fail, return a safe but invisible error or raise an exception
+                raise Exception("Failed to connect to the AI model after multiple retries. Please try again later.")
 
     print(f"[Chat] AI Reply: {reply[:100]}...")
 

@@ -46,7 +46,11 @@ export default function UserWorkspace() {
   // --- EXISTING PLAN LOGIC ---
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [todayKey, setTodayKey] = useState('day_1');
+  const [todayKey, setTodayKey] = useState(() => {
+    const dayOfWeek = new Date().getDay();
+    const dayNum = dayOfWeek === 0 ? 7 : dayOfWeek; // Sunday=7, Mon=1...
+    return `day_${dayNum}`;
+  });
   
   // Video Modal State
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -71,13 +75,11 @@ export default function UserWorkspace() {
   const [demoSideLoaded, setDemoSideLoaded] = useState(false);
   const [demoFrontError, setDemoFrontError] = useState(false);
   const [demoSideError, setDemoSideError] = useState(false);
-  const [dietStatus, setDietStatus] = useState({
-    breakfast: false,
-    lunch: false,
-    snacks: false,
-    dinner: false
-  });
+  const [dietStatus, setDietStatus] = useState([]);
   const [completedWorkouts, setCompletedWorkouts] = useState([]);
+  const [dailyAnalytics, setDailyAnalytics] = useState({ calories: 0, accuracy: 0, loading: false });
+  const [exerciseMetrics, setExerciseMetrics] = useState({});
+  const [historicalWeeklyData, setHistoricalWeeklyData] = useState([]);
 
   // --- DATA MAPPING (Moved Up to avoid ReferenceErrors) ---
   // Helper: normalize a V2 meals array into a V1-compatible object
@@ -159,45 +161,205 @@ export default function UserWorkspace() {
     return [];
   }, [plan, todayKey]);
 
-  // --- PROGRESS CALCULATIONS (Moved Up) ---
-  const completedDietCount = Object.values(dietStatus).filter(Boolean).length;
+  const total7DayMeals = useMemo(() => {
+    if (!plan?.diet_json) return 21; // fallback
+    let total = 0;
+    const dj = plan.diet_json;
+    
+    // V2 Schema
+    if (dj.days) {
+      Object.keys(dj.days).forEach(dayKey => {
+         const dayMeals = normalizeV2Meals(dj.days[dayKey]);
+         if (dayMeals) total += Object.keys(dayMeals).length;
+      });
+      return total;
+    }
+    // V1 Schema
+    let foundDays = 0;
+    for (let i = 1; i <= 7; i++) {
+       if (dj[`day_${i}`]) {
+         total += Object.keys(dj[`day_${i}`]).filter(k => dj[`day_${i}`][k]).length;
+         foundDays++;
+       }
+    }
+    if (foundDays > 0) return total;
+    
+    // Fallback if only one set of default meals is provided
+    const fallbackMeals = dj.meals ? normalizeV2Meals(dj.meals) : dj;
+    const baseCount = Object.keys(fallbackMeals).filter(k => fallbackMeals[k]).length || 3;
+    return baseCount * 7;
+  }, [plan]);
+
+  const total7DayExercises = useMemo(() => {
+    if (!plan?.workout_json) return 28; // fallback
+    let total = 0;
+    const wj = plan.workout_json;
+    
+    // V2 Schema
+    if (wj.sched && wj.tpl) {
+      wj.sched.forEach(templateKey => {
+         if (templateKey && templateKey !== 'M' && templateKey !== 'R' && wj.tpl[templateKey]?.ex) {
+           total += wj.tpl[templateKey].ex.length;
+         }
+      });
+      if (total > 0) return total;
+    }
+    
+    // V1 Schema
+    let foundDays = 0;
+    for (let i = 1; i <= 7; i++) {
+       if (wj[`day_${i}`]?.exercises) {
+         total += wj[`day_${i}`].exercises.length;
+         foundDays++;
+       }
+    }
+    if (foundDays > 0) return total;
+    
+    // Fallback
+    const baseCount = Array.isArray(wj.exercises) ? wj.exercises.length : (wj.plan?.exercises?.length || 4);
+    return baseCount * 7;
+  }, [plan]);
+
+  const completedDietCount = dietStatus.filter(k => k.startsWith(`${todayKey}_`)).length;
   const totalMeals = todayDiet ? Object.keys(todayDiet).filter(k => todayDiet[k]).length || 3 : 3;
   const dietProgress = Math.round((completedDietCount / totalMeals) * 100) || 0;
-  const workoutProgress = exercises.length > 0 ? Math.round((completedWorkouts.length / exercises.length) * 100) : 0;
+  
+  const weeklyDietProgress = total7DayMeals > 0 ? Math.round((dietStatus.length / total7DayMeals) * 100) : 0;
+  const weeklyWorkoutProgress = total7DayExercises > 0 ? Math.round((completedWorkouts.length / total7DayExercises) * 100) : 0;
+  
+  const todayCalories = useMemo(() => {
+    let target = 0;
+    let consumed = 0;
+
+    if (!todayDiet) return { target: plan?.daily_calories_target || 1800, consumed: 0 };
+
+    Object.entries(todayDiet).forEach(([mealName, meal]) => {
+      if (!meal) return;
+      let mealCals = 0;
+
+      if (typeof meal === 'object') {
+         mealCals = parseInt(meal.calories || meal.cal || 0, 10);
+      } else if (typeof meal === 'string') {
+         const match = meal.match(/\((\d+)\s*k?cal\)/i) || meal.match(/(\d+)\s*k?cal/i) || meal.match(/(\d+)\s*calories/i);
+         if (match && match[1]) mealCals = parseInt(match[1], 10);
+      }
+
+      target += mealCals;
+      
+      const statusKey = mealName.toLowerCase();
+      let isCompleted = dietStatus.includes(`${todayKey}_${statusKey}`);
+      if (statusKey === 'snack' && dietStatus.includes(`${todayKey}_snacks`)) isCompleted = true;
+      if (statusKey === 'snacks' && dietStatus.includes(`${todayKey}_snack`)) isCompleted = true;
+
+      // Ensure that if this meal was completed via UI, it adds its actual calories
+      if (isCompleted) {
+        consumed += mealCals;
+      }
+    });
+
+    if (target === 0) {
+      target = plan?.daily_calories_target || 1800;
+      consumed = Math.round((target * dietProgress) / 100);
+    }
+
+    return { target, consumed };
+  }, [todayDiet, plan, dietStatus, dietProgress]);
+  const activeDayCompletedCount = useMemo(() => {
+    return completedWorkouts.filter(id => typeof id === 'string' && id.startsWith(`${todayKey}_`)).length;
+  }, [completedWorkouts, todayKey]);
+
+  const workoutProgress = exercises.length > 0 ? Math.round((activeDayCompletedCount / exercises.length) * 100) : 0;
   const dbAdherence = userData?.adherence || 0;
   const sessionProgress = Math.round((dietProgress + workoutProgress) / 2);
   const overallProgress = dbAdherence > 0 ? Math.round((dbAdherence + sessionProgress) / 2) : sessionProgress;
 
-  function toggleWorkout(index) {
+  function toggleWorkout(index, name) {
+    const key = `${todayKey}_${name || index}`;
     setCompletedWorkouts(prev => 
-      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+      prev.includes(key) ? prev.filter(i => i !== key) : [...prev, key]
     );
   }
 
-  // Calculate today's day key
+  function markWorkoutAsDone(index, name) {
+    const key = `${todayKey}_${name || index}`;
+    setCompletedWorkouts(prev => 
+      prev.includes(key) ? prev : [...prev, key]
+    );
+  }
+
+  // Calculate today's day key (Only once on mount)
   useEffect(() => {
     const dayOfWeek = new Date().getDay();
     const dayNum = dayOfWeek === 0 ? 7 : dayOfWeek;
     setTodayKey(`day_${dayNum}`);
+  }, []);
 
-    // Restore today's progress from Logs
+  // Restore progress for the entire protocol (All 7 Days)
+  useEffect(() => {
     if (currentUser) {
-      const restoreProgress = async () => {
-        const today = new Date().toISOString().split('T')[0];
-        const logId = `${currentUser.uid}_${today}`;
+      const fetchProtocolHistory = async () => {
         try {
-          const logSnap = await getDoc(doc(db, 'logs', logId));
-          if (logSnap.exists()) {
-            const data = logSnap.data();
-            if (data.dietStatus) setDietStatus(data.dietStatus);
-            if (data.completedWorkouts) setCompletedWorkouts(data.completedWorkouts);
-            console.log('[Restore] Previous progress for today loaded.');
+          // 1. Fetch ALL logs for this user to build the full 7-day history
+          const q = query(
+            collection(db, 'logs'),
+            where('uid', '==', currentUser.uid)
+          );
+          
+          const snap = await getDocs(q);
+          const logsMap = {};
+          const allDietStatus = new Set();
+          const allCompletedWorkouts = new Set();
+          
+          snap.forEach(doc => {
+            const data = doc.data();
+            let dayKey = data.workout_day;
+            
+            // Inference Fallback (Same as Doctor Dashboard)
+            if (!dayKey) {
+              const rawString = JSON.stringify(data);
+              const match = rawString.match(/day_([1-7])/);
+              if (match) dayKey = `day_${match[1]}`;
+            }
+
+            if (dayKey) {
+              // Track most recent log per protocol day for the chart
+              if (!logsMap[dayKey] || (data.timestamp || 0) > (logsMap[dayKey].timestamp || 0)) {
+                logsMap[dayKey] = data;
+              }
+              // Aggregate unique completed items across ALL time for this protocol
+              if (Array.isArray(data.dietStatus)) {
+                data.dietStatus.forEach(s => allDietStatus.add(s));
+              }
+              if (Array.isArray(data.completedWorkouts)) {
+                data.completedWorkouts.forEach(w => allCompletedWorkouts.add(w));
+              }
+            }
+          });
+
+          // 2. Set the global completion states (Unions of all logs)
+          setDietStatus(Array.from(allDietStatus));
+          setCompletedWorkouts(Array.from(allCompletedWorkouts));
+
+          // 3. Build the 7-Day Chart Data (Day 1 through 7)
+          const weeklyData = [];
+          for (let i = 1; i <= 7; i++) {
+            const key = `day_${i}`;
+            const history = logsMap[key];
+            weeklyData.push({
+              day: `Day ${i}`,
+              diet: history ? (history.dietAdherence ?? history.dAdh ?? history.adherence ?? 0) : 0,
+              workout: history ? (history.exerciseAdherence ?? history.eAdh ?? history.adherence ?? 0) : 0
+            });
           }
+          setHistoricalWeeklyData(weeklyData);
+          console.debug(`[Analytics] Unified protocol history loaded (${snap.docs.length} logs).`);
+
         } catch (err) {
-          console.error('[Restore] Failed to fetch today\'s log:', err);
+          console.error('[Analytics] Failed to fetch protocol history:', err);
         }
       };
-      restoreProgress();
+      
+      fetchProtocolHistory();
     }
   }, [currentUser]);
 
@@ -232,25 +394,124 @@ export default function UserWorkspace() {
     return () => unsubscribe();
   }, [currentUser]);
 
+  /* ── DAILY PERFORMANCE ANALYTICS (Current Protocol Day Focus) ── */
+  useEffect(() => {
+    if (!currentUser || !todayKey) return;
+
+    const fetchCurrentAnalytics = async () => {
+      setDailyAnalytics(prev => ({ ...prev, loading: true }));
+      try {
+        // Query logs for the *selected* protocol day to show current feedback/angles
+        const q = query(
+          collection(db, 'logs'),
+          where('uid', '==', currentUser.uid),
+          where('workout_day', '==', todayKey)
+        );
+
+        const snap = await getDocs(q);
+        let totalCals = 0;
+        let totalGoodDur = 0;
+        let totalAllDur = 0;
+        const metricsMap = {};
+
+        snap.forEach(doc => {
+          const d = doc.data();
+          const exName = (d.exercise_name || "").trim();
+          
+          if (d.total_calories) totalCals += d.total_calories;
+          if (d.total_good_duration) totalGoodDur += d.total_good_duration;
+          if (d.total_all_rep_duration) totalAllDur += d.total_all_rep_duration;
+
+          // Per-exercise aggregation
+          if (!metricsMap[exName]) {
+            metricsMap[exName] = { calories: 0, goodDur: 0, allDur: 0, correctReps: 0 };
+          }
+          metricsMap[exName].calories += (d.total_calories || 0);
+          metricsMap[exName].goodDur += (d.total_good_duration || 0);
+          metricsMap[exName].allDur += (d.total_all_rep_duration || 0);
+          
+          const reps = d.success_reps_count !== undefined 
+            ? d.success_reps_count 
+            : Math.round(((d.accuracy || 0) * (d.reps_count || 0)) / 100);
+          metricsMap[exName].correctReps += reps;
+        });
+
+        // Accuracy Calculation: Right Rep Time / Total Rep Time
+        const accuracy = totalAllDur > 0 ? Math.round((totalGoodDur / totalAllDur) * 100) : 0;
+
+        setDailyAnalytics({
+          calories: totalCals,
+          accuracy: accuracy,
+          loading: false
+        });
+
+        // Finalize per-exercise accuracy
+        const finalizedMetrics = {};
+        Object.keys(metricsMap).forEach(name => {
+          const m = metricsMap[name];
+          // Strip category prefixes (e.g. "Shoulders - ") if present to match plan names
+          const normalizedName = name.split(' - ').pop() || name;
+          
+          finalizedMetrics[normalizedName] = {
+             calories: m.calories,
+             accuracy: m.allDur > 0 ? Math.round((m.goodDur / m.allDur) * 100) : 0,
+             correctReps: m.correctReps
+          };
+        });
+        setExerciseMetrics(finalizedMetrics);
+      } catch (err) {
+        console.error('[Analytics] Error:', err);
+        setDailyAnalytics(prev => ({ ...prev, loading: false }));
+      }
+    };
+    fetchCurrentAnalytics();
+  }, [currentUser, todayKey]);
+
+  /* ── WEEKLY PROGRESS ANALYTICS ───────────────────── */
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchWeeklyProgress = async () => {
+      try {
+        const q = query(
+          collection(db, 'logs'),
+          where('uid', '==', currentUser.uid)
+        );
+        
+        const snap = await getDocs(q);
+        const logsMap = {};
+        snap.forEach(doc => {
+          const data = doc.data();
+          if (data.workout_day) {
+            // Keep the most recent or highest adherence for that specific plan day
+            if (!logsMap[data.workout_day] || data.timestamp > logsMap[data.workout_day].timestamp) {
+              logsMap[data.workout_day] = data;
+            }
+          }
+        });
+        
+        setHistoricalWeeklyData(Object.values(logsMap));
+      } catch (err) {
+        console.error('[Analytics] Error fetching weekly progress:', err);
+      }
+    };
+    fetchWeeklyProgress();
+  }, [currentUser]);
+
   /* ── Sync Progress to Firebase (Back to Doctor) ────── */
   useEffect(() => {
     if (!currentUser || !plan) return;
 
     // We only sync if there is actual progress to report
-    const hasDietProgress = Object.values(dietStatus).some(v => v === true);
+    const hasDietProgress = dietStatus.length > 0;
     const hasWorkoutProgress = completedWorkouts.length > 0;
     if (!hasDietProgress && !hasWorkoutProgress) return;
 
     const syncProgress = async () => {
       try {
-        // 1. Calculate Adherence Metrics
-        const totalMeals = Object.keys(dietStatus).length || 1;
-        const mealsDone = Object.values(dietStatus).filter(v => v === true).length;
-        const dAdh = Math.round((mealsDone / totalMeals) * 100);
-
-        const totalEx = exercises.length || 1;
-        const exDone = completedWorkouts.length;
-        const eAdh = Math.round((exDone / totalEx) * 100);
+        // 1. Calculate Adherence Metrics based on overall protocol
+        const dAdh = total7DayMeals > 0 ? Math.round((dietStatus.length / total7DayMeals) * 100) : 0;
+        const totalEx = total7DayExercises || 1;
+        const eAdh = Math.round((completedWorkouts.length / totalEx) * 100);
 
         const overallAdh = Math.round((dAdh + eAdh) / 2);
 
@@ -264,17 +525,19 @@ export default function UserWorkspace() {
         });
 
         // 3. Save to Logs Collection (for Doctor Analytics/History)
-        const logId = `${currentUser.uid}_${new Date().toISOString().split('T')[0]}`;
+        const localDateStr = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+        const logId = `${currentUser.uid}_${localDateStr}_${todayKey}`;
         const logRef = doc(db, 'logs', logId);
         await setDoc(logRef, {
           uid: currentUser.uid,
-          date: new Date().toISOString().split('T')[0],
+          date: localDateStr,
           timestamp: new Date().toISOString(),
+          workout_day: todayKey,
           dietStatus,
           completedWorkouts,
           adherence: overallAdh,
-          dietAdherence: dAdh,
-          exerciseAdherence: eAdh,
+          dietAdherence: dietProgress, // Store daily metric specifically for historical charting
+          exerciseAdherence: workoutProgress, // Store daily metric specifically for historical charting
         }, { merge: true });
 
         console.log('[Sync] Progress saved to cloud.');
@@ -284,7 +547,7 @@ export default function UserWorkspace() {
     };
 
     // Debounce sync slightly to avoid excessive writes while clicking
-    const timer = setTimeout(syncProgress, 2000);
+    const timer = setTimeout(syncProgress, 1000);
     return () => clearTimeout(timer);
   }, [dietStatus, completedWorkouts, currentUser, plan, exercises.length]);
 
@@ -356,16 +619,39 @@ export default function UserWorkspace() {
     }
   }
 
-  // Weekly data dummy or from DB
-  const weeklyData = userData?.weekly_progress || [
-    { day: 'Day 1', diet: 0, workout: 0 },
-    { day: 'Day 2', diet: 0, workout: 0 },
-    { day: 'Day 3', diet: 0, workout: 0 },
-    { day: 'Day 4', diet: 0, workout: 0 },
-    { day: 'Day 5', diet: 0, workout: 0 },
-    { day: 'Day 6', diet: 0, workout: 0 },
-    { day: 'Today', diet: dietProgress, workout: workoutProgress }, // Live today
-  ];
+  // Weekly data from DB mapped to Plan Days 1-7
+  const weeklyData = useMemo(() => {
+    const data = [];
+    for (let i = 1; i <= 7; i++) {
+       const key = `day_${i}`;
+       // Look up from protocol history
+       const history = historicalWeeklyData[i-1];
+       
+       if (key === todayKey) {
+          // Merge current active day's live progress
+          data.push({ 
+            day: `Day ${i}`, 
+            diet: Math.max(dietProgress, history?.diet || 0), 
+            workout: Math.max(workoutProgress, history?.workout || 0) 
+          });
+       } else {
+          data.push({
+             day: `Day ${i}`,
+             diet: history?.diet || 0,
+             workout: history?.workout || 0
+          });
+       }
+    }
+    return data;
+  }, [historicalWeeklyData, dietProgress, workoutProgress, todayKey]);
+
+  const sevenDayProgress = useMemo(() => {
+    let sum = 0;
+    weeklyData.forEach(d => {
+       sum += (d.diet + d.workout) / 2;
+    });
+    return Math.round(sum / 7) || 0;
+  }, [weeklyData]);
 
   // Recovery Projection Logic
   const totalRecoveryDays = 28; 
@@ -408,13 +694,13 @@ export default function UserWorkspace() {
           <div className="progress-circle-container">
             <svg className="progress-circle" viewBox="0 0 36 36">
               <circle cx="18" cy="18" r="15.915" className="circle-bg" />
-              <circle cx="18" cy="18" r="15.915" className="circle-fg circle-diet" strokeDasharray={`${dietProgress} ${100 - dietProgress}`} />
+              <circle cx="18" cy="18" r="15.915" className="circle-fg circle-diet" strokeDasharray={`${weeklyDietProgress} ${100 - weeklyDietProgress}`} />
             </svg>
-            <span className="progress-text">{dietProgress}%</span>
+            <span className="progress-text">{weeklyDietProgress}%</span>
           </div>
           <div className="stat-info">
             <h4 className="stat-label">Diet Completion</h4>
-            <p className="stat-value">{completedDietCount} of 3 Meals</p>
+            <p className="stat-value">{total7DayMeals} Meals / Week</p>
           </div>
         </div>
 
@@ -422,23 +708,23 @@ export default function UserWorkspace() {
           <div className="progress-circle-container">
             <svg className="progress-circle" viewBox="0 0 36 36">
               <circle cx="18" cy="18" r="15.915" className="circle-bg" />
-              <circle cx="18" cy="18" r="15.915" className="circle-fg circle-workout" strokeDasharray={`${workoutProgress} ${100 - workoutProgress}`} />
+              <circle cx="18" cy="18" r="15.915" className="circle-fg circle-workout" strokeDasharray={`${weeklyWorkoutProgress} ${100 - weeklyWorkoutProgress}`} />
             </svg>
-            <span className="progress-text">{workoutProgress}%</span>
+            <span className="progress-text">{weeklyWorkoutProgress}%</span>
           </div>
           <div className="stat-info">
             <h4 className="stat-label">Therapy Progress</h4>
-            <p className="stat-value">{completedWorkouts.length} of {exercises.length} Exercises</p>
+            <p className="stat-value">{total7DayExercises} Exercises / Week</p>
           </div>
         </div>
 
         <div className="stat-card trajectory-card">
            <div className="trajectory-icon"><Trophy size={80} /></div>
-           <h4 className="stat-label">Overall Trajectory</h4>
+           <h4 className="stat-label">Overall 7-Day Progress</h4>
            <div className="trajectory-content">
-             <span className="overall-percent">{overallProgress}%</span>
+             <span className="overall-percent">{sevenDayProgress}%</span>
              <span className="trend-badge">
-               <TrendingUp size={14} className="mr-1" /> +2.4%
+               <TrendingUp size={14} className="mr-1" /> Avg
              </span>
            </div>
         </div>
@@ -567,12 +853,12 @@ export default function UserWorkspace() {
             <div className="cal-data">
               <div className="data-box">
                 <span className="box-label">Target</span>
-                <span className="box-value target-val">{plan?.daily_calories_target || 1800} kcal</span>
+                <span className="box-value target-val">{todayCalories.target} kcal</span>
               </div>
               <div className="data-box">
                 <span className="box-label">Consumed</span>
                 <span className="box-value consume-val">
-                  {Math.round(((plan?.daily_calories_target || 1800) * dietProgress) / 100)} kcal
+                  {todayCalories.consumed} kcal
                 </span>
               </div>
             </div>
@@ -686,6 +972,8 @@ export default function UserWorkspace() {
                 <span>Phase: Mobility Correction</span>
               </div>
             </div>
+
+            {/* --- TOP KPI CARDS REMOVED TO CONSOLIDATE PERFORMANCE ON INDIVIDUAL EXERCISE CARDS --- */}
             
             <div className="exercise-grid">
               {exercises.length === 0 || (exercises.length === 1 && exercises[0].name === 'Rest & Recovery') ? (
@@ -745,11 +1033,11 @@ export default function UserWorkspace() {
                   </p>
                   
                   <button 
-                    onClick={() => toggleWorkout(0)} 
+                    onClick={() => toggleWorkout(0, 'Rest & Recovery')} 
                     style={{
                       padding: '12px 32px',
                       borderRadius: '50px',
-                      background: completedWorkouts.includes(0) ? '#10b981' : 'var(--clinical-blue)',
+                      background: completedWorkouts.includes(`${todayKey}_Rest & Recovery`) ? '#10b981' : 'var(--clinical-blue)',
                       color: 'white',
                       fontWeight: 600,
                       border: 'none',
@@ -761,13 +1049,13 @@ export default function UserWorkspace() {
                       boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
                     }}
                   >
-                    {completedWorkouts.includes(0) ? <CheckCircle2 size={18} /> : <Activity size={18} />}
-                    {completedWorkouts.includes(0) ? 'Recovery Logged!' : 'Acknowledge Recovery'}
+                    {completedWorkouts.includes(`${todayKey}_Rest & Recovery`) ? <CheckCircle2 size={18} /> : <Activity size={18} />}
+                    {completedWorkouts.includes(`${todayKey}_Rest & Recovery`) ? 'Recovery Logged!' : 'Acknowledge Recovery'}
                   </button>
                 </div>
               ) : exercises.length > 0 ? (
                 exercises.map((workout, i) => {
-                  const isDone = completedWorkouts.includes(i);
+                  const isDone = completedWorkouts.includes(`${todayKey}_${workout.name}`);
                   return (
                     <div key={i} className={`exercise-card ${isDone ? 'exercise-card--done' : ''}`}>
                       <div className={`exercise-icon-box ${isDone ? 'exercise-icon-box--done' : ''}`}>
@@ -783,14 +1071,24 @@ export default function UserWorkspace() {
                         <div className="exercise-meta">
                           <span className="exercise-tag">{workout.sets || '3'} x {workout.reps || '12'}</span>
                         </div>
+
+                        {/* --- EXERCISE PERFORMANCE METRICS --- */}
+                        {exerciseMetrics[workout.name] && (
+                          <div className="exercise-performance-metrics clinical-metric-group">
+                            <div className="performance-metric-badge premium-badge" title="Energy Output">
+                              <span className="perf-icon">⚡</span>
+                              <span className="perf-val">{exerciseMetrics[workout.name].calories.toFixed(1)}</span>
+                              <span className="perf-unit">kcal</span>
+                            </div>
+                            <div className="performance-metric-badge premium-badge" title="Technique Precision">
+                              <span className="perf-icon">🎯</span>
+                              <span className="perf-val">{exerciseMetrics[workout.name].accuracy}%</span>
+                              <span className="perf-unit">Accuracy</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div className="exercise-action-btns">
-                        <button 
-                          onClick={() => toggleWorkout(i)} 
-                          className={`btn-exercise-mark ${isDone ? 'btn-exercise-mark--active' : ''}`}
-                        >
-                          {isDone ? 'Done' : 'Mark Done'}
-                        </button>
                         {!isDone && workout.name !== 'Rest & Recovery' && (
                           <button onClick={() => handleProceed(workout)} className="btn-exercise-proceed">
                             Proceed
@@ -924,8 +1222,15 @@ export default function UserWorkspace() {
             <CameraView
               embedded={true}
               exerciseName={selectedExercise?.name}
+              targetSets={parseInt(selectedExercise?.sets)}
+              targetReps={parseInt(selectedExercise?.reps)}
+              workoutDay={todayKey}
               onClose={() => { setIsFullscreen(false); handleBackToList(); }}
               onRepUpdate={(count) => setLiveRepCount(count)}
+              onComplete={() => {
+                const idx = exercises.findIndex(ex => ex.name === selectedExercise?.name);
+                if (idx !== -1) markWorkoutAsDone(idx, selectedExercise?.name);
+              }}
             />
             {/* Floating overlay UI */}
             <div className="fs-overlay-top">
@@ -939,9 +1244,6 @@ export default function UserWorkspace() {
                 <span className="fs-rep-num">{String(liveRepCount).padStart(2, '0')}</span>
                 <span className="fs-rep-label">/ {selectedExercise?.reps || '15'} REPS</span>
               </div>
-              <button onClick={() => { setIsFullscreen(false); handleBackToList(); }} className="fs-stop-btn">
-                ✕ Stop Session
-              </button>
             </div>
           </div>
         );
@@ -953,15 +1255,18 @@ export default function UserWorkspace() {
           {/* Tracker Area */}
           <div className="live-tracker-column">
             <div className="tracker-stage">
-              <button onClick={handleBackToList} className="tracker-stop-btn">
-                ✕ Stop & Save
-              </button>
 
               <CameraView
                 embedded={true}
                 exerciseName={selectedExercise?.name}
+                targetSets={parseInt(selectedExercise?.sets)}
+                targetReps={parseInt(selectedExercise?.reps)}
                 onClose={handleBackToList}
                 onRepUpdate={(count) => setLiveRepCount(count)}
+                onComplete={() => {
+                  const idx = exercises.findIndex(ex => ex.name === selectedExercise?.name);
+                  if (idx !== -1) markWorkoutAsDone(idx, selectedExercise?.name);
+                }}
               />
             </div>
           </div>
@@ -1117,25 +1422,29 @@ export default function UserWorkspace() {
               {activeTab === 'home' ? 'Clinical Dashboard' : activeTab === 'diet' ? 'Nutrition Protocol' : 'Physical Therapy'}
             </h2>
             
-            {/* Day Switcher UI */}
-            {plan && workoutViewState === 'list' && (
-              <div className="day-switcher" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+            {/* Day Switcher UI (Hidden on Dashboard, shown on Protocol tabs) */}
+            {plan && workoutViewState === 'list' && activeTab !== 'home' && (
+              <div className="day-switcher" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', marginBottom: '8px' }}>
                 {[1, 2, 3, 4, 5, 6, 7].map(d => (
                   <button 
                     key={d}
-                    onClick={() => setTodayKey(`day_${d}`)}
+                    onClick={() => {
+                      setTodayKey(`day_${d}`);
+                      // Also reset scroll for better UX on mobile
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
                     style={{
-                      padding: '6px 14px',
-                      borderRadius: '20px',
+                      padding: '8px 18px',
+                      borderRadius: '24px',
                       border: '1px solid var(--clinical-blue-border, #bfdbfe)',
                       background: todayKey === `day_${d}` ? 'var(--clinical-blue, #2563eb)' : '#fff',
                       color: todayKey === `day_${d}` ? '#fff' : 'var(--clinical-blue, #2563eb)',
-                      fontWeight: 600,
-                      fontSize: '14px',
+                      fontWeight: 700,
+                      fontSize: '13px',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
-                      transition: 'all 0.2s ease',
-                      boxShadow: todayKey === `day_${d}` ? '0 2px 4px rgba(37,99,235,0.2)' : 'none'
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: todayKey === `day_${d}` ? '0 4px 12px rgba(37,99,235,0.25)' : '0 2px 4px rgba(0,0,0,0.02)'
                     }}
                   >
                     Day {d}
@@ -1211,11 +1520,14 @@ export default function UserWorkspace() {
               <button onClick={() => setIsDietDetailOpen(false)} className="close-btn"><X size={18} /></button>
             </div>
             <div className="drawer-body custom-scrollbar">
-              {['Breakfast', 'Lunch', 'Snacks', 'Dinner'].map((meal) => (
+              {['Breakfast', 'Lunch', 'Snacks', 'Dinner'].map((meal) => {
+                const mealKey = `${todayKey}_${meal.toLowerCase()}`;
+                const isCompleted = dietStatus.includes(mealKey);
+                return (
                 <div 
                   key={meal} 
-                  onClick={() => setDietStatus(p => ({...p, [meal.toLowerCase()]: !p[meal.toLowerCase()]}))} 
-                  className={`log-item ${dietStatus[meal.toLowerCase()] ? 'completed' : ''}`}
+                  onClick={() => setDietStatus(p => p.includes(mealKey) ? p.filter(k => k !== mealKey) : [...p, mealKey])} 
+                  className={`log-item ${isCompleted ? 'completed' : ''}`}
                 >
                   <div className="log-info">
                     <h4 className="log-meal-name">{meal}</h4>
@@ -1226,10 +1538,11 @@ export default function UserWorkspace() {
                     </p>
                   </div>
                   <div className="log-checkbox">
-                    {dietStatus[meal.toLowerCase()] ? <CheckCircle2 size={24} className="text-emerald" /> : <Circle size={24} className="text-slate-300" />}
+                    {isCompleted ? <CheckCircle2 size={24} className="text-emerald" /> : <Circle size={24} className="text-slate-300" />}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               <div className="drawer-footer">
                  <p className="text-xs text-slate-400 text-center italic mt-4">Logging helps track your recovery trajectory accurately.</p>
               </div>
